@@ -59,7 +59,7 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
 } {
   const actions: AppAction[] = [];
   let newState = state;
-  let newContext = { ...context };
+  const newContext = { ...context };
 
   switch (state) {
     case 'WELCOME':
@@ -150,7 +150,7 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
 }
 
 export function applyActions(context: AppContext, actions: AppAction[]): AppContext {
-  let newContext = { ...context };
+  const newContext = { ...context };
 
   for (const action of actions) {
     switch (action.type) {

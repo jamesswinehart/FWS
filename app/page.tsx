@@ -255,7 +255,6 @@ export default function FoodWasteScoreApp() {
       case 'SCORE':
         return (
           <ScreenScore
-            netId={context.netId || ''}
             score={context.currentScore || 0}
             comparisonText={getComparisonText()}
             onShowLeaderboard={handleShowLeaderboard}

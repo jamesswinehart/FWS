@@ -2,7 +2,6 @@ import React from 'react';
 import CircleGauge from './CircleGauge';
 
 interface ScreenScoreProps {
-  netId: string;
   score: number;
   comparisonText: string;
   onShowLeaderboard: () => void;
@@ -11,16 +10,12 @@ interface ScreenScoreProps {
 }
 
 export default function ScreenScore({ 
-  netId, 
   score, 
   comparisonText, 
   onShowLeaderboard, 
   onExit,
   onBack
 }: ScreenScoreProps) {
-  // Extract first name from NetID (assuming format like "jsmith123" -> "jsmith")
-  const firstName = netId.split(/\d/)[0] || netId;
-  
   return (
     <div className="min-h-screen bg-dark-slate flex items-center justify-center p-8">
       {/* Back button */}

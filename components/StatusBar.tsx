@@ -1,7 +1,6 @@
 import React from 'react';
 import { ScaleTransport } from '../transport/transport';
 import { getLeaderboardStats } from '../lib/leaderboard-api';
-import { getCurrentMealPeriod, getMealPeriodDisplayName, getMealPeriodWithTime } from '../lib/meal';
 import { LeaderboardEntry } from '../lib/database';
 
 interface StatusBarProps {
