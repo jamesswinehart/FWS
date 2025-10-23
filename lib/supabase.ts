@@ -24,6 +24,16 @@ export interface LeaderboardEntry {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.USER_STORAGE_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.USER_STORAGE_SUPABASE_ANON_KEY || 'placeholder-key';
 
+// Debug logging
+console.log('Supabase URL:', supabaseUrl);
+console.log('Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '...');
+console.log('Environment check:', {
+  NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+  USER_STORAGE_SUPABASE_URL: !!process.env.USER_STORAGE_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  USER_STORAGE_SUPABASE_ANON_KEY: !!process.env.USER_STORAGE_SUPABASE_ANON_KEY
+});
+
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Database initialization
@@ -51,13 +61,20 @@ export async function initializeDatabase() {
 // User scores functions
 export async function saveUserScore(score: Omit<UserScore, 'id' | 'created_at'>) {
   try {
+    console.log('Saving user score:', score);
+    
     const { data, error } = await supabase
       .from('user_scores')
       .insert([score])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error saving user score:', error);
+      throw error;
+    }
+    
+    console.log('Successfully saved user score:', data);
     return data;
   } catch (error) {
     console.error('Failed to save user score:', error);
