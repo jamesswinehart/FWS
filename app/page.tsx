@@ -62,7 +62,19 @@ export default function FoodWasteScoreApp() {
 
   // Dispatch function for state machine
   const dispatch = useCallback((event: AppEvent) => {
+    console.log('=== STATE TRANSITION ===');
+    console.log('Event:', event.type);
+    console.log('From state:', stateRef.current);
+    console.log('Context before:', {
+      netId: contextRef.current.netId,
+      dishType: contextRef.current.dishType,
+      currentScore: contextRef.current.currentScore
+    });
+    
     const result = appReducer(stateRef.current, contextRef.current, event);
+    console.log('To state:', result.state);
+    console.log('Actions:', result.actions.map(a => a.type));
+    
     setState(result.state);
     setContext(applyActions(result.context, result.actions));
   }, []);
@@ -72,28 +84,11 @@ export default function FoodWasteScoreApp() {
     const handleReading = (reading: any) => {
       dispatch({ type: 'READING_UPDATE', reading });
       
-      // Check if we should transition to SCORE state
-      // Only transition if we're in DISH_TYPE state AND have a dish type selected AND readings are stable
+      // Debug logging
       console.log('=== READING UPDATE DEBUG ===');
       console.log('Current state:', stateRef.current);
       console.log('Dish type:', contextRef.current.dishType);
       console.log('Readings count:', contextRef.current.readings.length);
-      
-      if (stateRef.current === 'DISH_TYPE' && contextRef.current.dishType && contextRef.current.readings.length > 0) {
-        const isStable = gateStable([...contextRef.current.readings, reading]);
-        console.log('Is stable:', isStable);
-        
-        if (isStable) {
-          const score = calculateDishScore(reading.grams, contextRef.current.dishType);
-          console.log('=== SCORE CALCULATED ===');
-          console.log('Raw weight:', reading.grams, 'grams');
-          console.log('Dish type:', contextRef.current.dishType);
-          console.log('Calculated score:', score);
-          
-          dispatch({ type: 'SET_SCORE', score } as any);
-          setState('SCORE');
-        }
-      }
     };
 
     transport.onReading(handleReading);
@@ -180,6 +175,8 @@ export default function FoodWasteScoreApp() {
   const handleSelectDish = useCallback((dishType: DishType) => {
     console.log('=== DISH SELECTED ===');
     console.log('Selected dish type:', dishType);
+    console.log('Current readings count:', contextRef.current.readings.length);
+    
     dispatch({ type: 'SELECT_DISH', dishType });
   }, [dispatch]);
 

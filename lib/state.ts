@@ -1,6 +1,8 @@
 import { ScaleReading } from '../transport/transport';
-import { DishType } from './fws';
+import { calculateDishScore } from './fws';
 import { LeaderboardEntry } from './supabase';
+
+export type DishType = 'plate' | 'salad' | 'cereal';
 
 export type AppState = 
   | 'WELCOME'
@@ -66,7 +68,8 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
       if (event.type === 'SUBMIT_NETID') {
         newState = 'DISH_TYPE';
         actions.push({ type: 'SET_NETID', netId: event.netId });
-        actions.push({ type: 'RESET_SESSION' });
+        // Don't reset session - we want to keep the NetID!
+        // FIXED: Removed RESET_SESSION that was clearing NetID
       }
       break;
 
@@ -74,6 +77,12 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
       if (event.type === 'SELECT_DISH') {
         newState = 'SCORE';
         actions.push({ type: 'SET_DISH_TYPE', dishType: event.dishType });
+        // Calculate score using the latest reading
+        if (context.readings.length > 0) {
+          const latestReading = context.readings[context.readings.length - 1];
+          const score = calculateDishScore(latestReading.grams, event.dishType);
+          actions.push({ type: 'SET_SCORE', score });
+        }
       } else if (event.type === 'BACK') {
         newState = 'WELCOME';
         actions.push({ type: 'RESET_SESSION' });
@@ -154,10 +163,18 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
   for (const action of actions) {
     switch (action.type) {
       case 'SET_NETID':
+        console.log('=== SET_NETID ACTION ===');
+        console.log('Setting netId to:', action.netId);
+        console.log('Previous context:', newContext);
         newContext.netId = action.netId;
+        console.log('New context after SET_NETID:', newContext);
         break;
       case 'SET_DISH_TYPE':
+        console.log('=== SET_DISH_TYPE ACTION ===');
+        console.log('Setting dishType to:', action.dishType);
+        console.log('Previous context:', newContext);
         newContext.dishType = action.dishType;
+        console.log('New context after SET_DISH_TYPE:', newContext);
         break;
       case 'ADD_READING':
         newContext.readings = [...newContext.readings.slice(-50), action.reading]; // Keep last 50 readings
@@ -166,7 +183,11 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         }
         break;
       case 'SET_SCORE':
+        console.log('=== SET_SCORE ACTION ===');
+        console.log('Setting score to:', action.score);
+        console.log('Previous context:', newContext);
         newContext.currentScore = action.score;
+        console.log('New context after SET_SCORE:', newContext);
         break;
       case 'SET_IDLE_COUNTDOWN':
         newContext.idleCountdown = action.countdown;
@@ -178,18 +199,26 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         newContext.errorMessage = undefined;
         break;
       case 'RESET_SESSION':
+        console.log('=== RESET_SESSION ACTION ===');
+        console.log('WARNING: Resetting all session data!');
+        console.log('Previous context:', newContext);
         newContext.netId = undefined;
         newContext.dishType = undefined;
         newContext.currentScore = undefined;
         newContext.readings = [];
         newContext.stableReadings = [];
         newContext.idleCountdown = 25; // Reset to 25 seconds
+        console.log('New context after RESET_SESSION:', newContext);
         break;
       case 'CLEAR_DISH_DATA':
+        console.log('=== CLEAR_DISH_DATA ACTION ===');
+        console.log('WARNING: Clearing dish data!');
+        console.log('Previous context:', newContext);
         newContext.dishType = undefined;
         newContext.currentScore = undefined;
         newContext.readings = [];
         newContext.stableReadings = [];
+        console.log('New context after CLEAR_DISH_DATA:', newContext);
         break;
       case 'UPDATE_LEADERBOARD':
         const updatedLeaderboard = [...newContext.leaderboard, action.entry]
@@ -214,6 +243,9 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
 
 export function getInitialContext(): AppContext {
   return {
+    netId: undefined,
+    dishType: undefined,
+    currentScore: 0, // Initialize to 0 instead of undefined
     readings: [],
     stableReadings: [],
     idleCountdown: 25,
