@@ -62,7 +62,6 @@ export default function FoodWasteScoreApp() {
 
   // Dispatch function for state machine
   const dispatch = useCallback((event: AppEvent) => {
-    console.log('Dispatching event:', event.type, 'Current state:', stateRef.current, 'Countdown:', contextRef.current.idleCountdown);
     const result = appReducer(stateRef.current, contextRef.current, event);
     setState(result.state);
     setContext(applyActions(result.context, result.actions));
@@ -99,14 +98,11 @@ export default function FoodWasteScoreApp() {
 
   // Inactivity timer
   useEffect(() => {
-    console.log('Setting up idle timer interval');
     const interval = setInterval(() => {
-      console.log('Idle timer tick - dispatching IDLE_TICK');
       dispatch({ type: 'IDLE_TICK' });
     }, 1000);
 
     return () => {
-      console.log('Clearing idle timer interval');
       clearInterval(interval);
     };
   }, [dispatch]);
@@ -118,7 +114,6 @@ export default function FoodWasteScoreApp() {
     };
 
     const handleForceIdle = () => {
-      console.log('Force idle triggered');
       setContext(prev => ({ ...prev, idleCountdown: 0 }));
     };
 
@@ -134,7 +129,6 @@ export default function FoodWasteScoreApp() {
   useEffect(() => {
     const handleUserActivity = () => {
       if (stateRef.current !== 'IDLE_WARNING' && stateRef.current !== 'ERROR') {
-        console.log('User activity detected, resetting idle timer to 25s');
         setContext(prev => ({ ...prev, idleCountdown: 25 }));
       }
     };
@@ -195,7 +189,6 @@ export default function FoodWasteScoreApp() {
     if (context.currentScore && context.netId) {
       // Check if score qualifies for leaderboard (minimum 50 points)
       if (!qualifiesForLeaderboard(context.currentScore)) {
-        console.log('Score too low for leaderboard:', context.currentScore);
         return;
       }
       
@@ -222,7 +215,6 @@ export default function FoodWasteScoreApp() {
           context.stableReadings?.[context.stableReadings.length - 1]?.grams || 0
         );
         
-        console.log('Added to leaderboard:', entry);
       } catch (error) {
         console.error('Failed to save to database:', error);
         // Still update UI even if database fails
