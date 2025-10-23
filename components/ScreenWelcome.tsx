@@ -42,6 +42,8 @@ export default function ScreenWelcome({ onSubmitNetId }: ScreenWelcomeProps) {
         {/* NetID input form */}
         <form onSubmit={handleSubmit} className="flex items-center justify-center gap-4">
           <input
+            id="netid"
+            name="netid"
             type="text"
             value={netId}
             onChange={(e) => setNetId(e.target.value)}

@@ -114,6 +114,8 @@ export default function ScreenLeaderboard({
               {entry.isInput && !isSubmitted ? (
                 <form onSubmit={handleSubmit} className="flex items-center gap-4 flex-1">
                   <input
+                    id="initials"
+                    name="initials"
                     type="text"
                     value={initials}
                     onChange={(e) => setInitials(e.target.value.toUpperCase().slice(0, 3))}
