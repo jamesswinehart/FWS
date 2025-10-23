@@ -87,6 +87,12 @@ export default function FoodWasteScoreApp() {
         const isStable = gateStable([...contextRef.current.readings, reading]);
         if (isStable) {
           const score = calculateDishScore(reading.grams, contextRef.current.dishType);
+          console.log('=== SCORE CALCULATED ===');
+          console.log('Raw weight:', reading.grams, 'grams');
+          console.log('Dish type:', contextRef.current.dishType);
+          console.log('Calculated score:', score);
+          console.log('Attempting to submit score to database...');
+          
           dispatch({ type: 'SET_SCORE', score } as any);
           setState('SCORE');
         }
@@ -226,6 +232,16 @@ export default function FoodWasteScoreApp() {
       
       try {
         console.log('Attempting to add to leaderboard...');
+        console.log('=== ATTEMPTING TO SUBMIT TO DATABASE ===');
+        console.log('Leaderboard entry:', entry);
+        console.log('User score data:', {
+          netId: context.netId,
+          mealPeriod: mealPeriod,
+          score: context.currentScore,
+          dishType: context.dishType,
+          weightGrams: context.stableReadings?.[context.stableReadings.length - 1]?.grams || 0
+        });
+        
         // Add to leaderboard using the database API
         const updatedLeaderboard = await addLeaderboardEntryToAPI(entry);
         console.log('Successfully added to leaderboard:', updatedLeaderboard);
