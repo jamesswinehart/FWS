@@ -3,7 +3,7 @@ import {
   initializeDatabase, 
   getDailyStats,
   getMealPeriodStats
-} from '../../../lib/database';
+} from '../../../lib/supabase';
 
 // Initialize database on first request
 let dbInitialized = false;

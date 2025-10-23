@@ -1,6 +1,6 @@
 import { ScaleReading } from '../transport/transport';
 import { DishType } from './fws';
-import { LeaderboardEntry } from './database';
+import { LeaderboardEntry } from './supabase';
 
 export type AppState = 
   | 'WELCOME'

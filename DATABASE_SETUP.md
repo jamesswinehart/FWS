@@ -1,4 +1,4 @@
-# Vercel Postgres Database Setup Guide
+# Supabase Database Setup Guide
 
 ## 🔐 Password Protection
 
@@ -18,7 +18,7 @@ The kiosk app now includes password protection! Set up authentication by adding 
    - Session lasts 24 hours
    - Logout button available in debug panel (press 'D')
 
-## 1. Create Vercel Postgres Database
+## 1. Create Supabase Project
 
 1. Go to your Vercel dashboard
 2. Navigate to **Storage** → **Create Database** → **Postgres**

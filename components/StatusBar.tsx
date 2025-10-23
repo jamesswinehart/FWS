@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScaleTransport } from '../transport/transport';
 import { getLeaderboardStats } from '../lib/leaderboard-api';
-import { LeaderboardEntry } from '../lib/database';
+import { LeaderboardEntry } from '../lib/supabase';
 
 interface StatusBarProps {
   transport: ScaleTransport;

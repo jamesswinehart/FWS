@@ -4,7 +4,7 @@ import {
   saveUserScore, 
   getUserLastScore, 
   getUserScores
-} from '../../../lib/database';
+} from '../../../lib/supabase';
 
 // Initialize database on first request
 let dbInitialized = false;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LeaderboardEntry } from '../lib/database';
+import { LeaderboardEntry } from '../lib/supabase';
 
 interface ScreenLeaderboardProps {
   leaderboard: LeaderboardEntry[];
