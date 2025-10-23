@@ -21,8 +21,15 @@ export interface LeaderboardEntry {
 }
 
 // Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.USER_STORAGE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.USER_STORAGE_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 
+                   process.env.USER_STORAGE_SUPABASE_URL || 
+                   process.env.NEXT_PUBLIC_USER_STORAGE_SUPABASE_URL || 
+                   'https://placeholder.supabase.co';
+
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+                   process.env.USER_STORAGE_SUPABASE_ANON_KEY || 
+                   process.env.NEXT_PUBLIC_USER_STORAGE_SUPABASE_ANON_KEY || 
+                   'placeholder-key';
 
 // Debug logging
 console.log('Supabase URL:', supabaseUrl);
@@ -30,8 +37,10 @@ console.log('Supabase Key (first 20 chars):', supabaseKey.substring(0, 20) + '..
 console.log('Environment check:', {
   NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
   USER_STORAGE_SUPABASE_URL: !!process.env.USER_STORAGE_SUPABASE_URL,
+  NEXT_PUBLIC_USER_STORAGE_SUPABASE_URL: !!process.env.NEXT_PUBLIC_USER_STORAGE_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  USER_STORAGE_SUPABASE_ANON_KEY: !!process.env.USER_STORAGE_SUPABASE_ANON_KEY
+  USER_STORAGE_SUPABASE_ANON_KEY: !!process.env.USER_STORAGE_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_USER_STORAGE_SUPABASE_ANON_KEY: !!process.env.NEXT_PUBLIC_USER_STORAGE_SUPABASE_ANON_KEY
 });
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
