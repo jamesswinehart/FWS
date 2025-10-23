@@ -2,14 +2,16 @@ import React from 'react';
 import { ScaleTransport } from '../transport/transport';
 import { getLeaderboardStats } from '../lib/leaderboard-api';
 import { getCurrentMealPeriod, getMealPeriodDisplayName, getMealPeriodWithTime } from '../lib/meal';
+import { LeaderboardEntry } from '../lib/database';
 
 interface StatusBarProps {
   transport: ScaleTransport;
   mealPeriod: string;
   idleCountdown?: number;
+  leaderboard?: LeaderboardEntry[];
 }
 
-export default function StatusBar({ transport, mealPeriod, idleCountdown }: StatusBarProps) {
+export default function StatusBar({ transport, mealPeriod, idleCountdown, leaderboard = [] }: StatusBarProps) {
   const [showDebug, setShowDebug] = React.useState(false);
 
   React.useEffect(() => {
@@ -72,9 +74,9 @@ export default function StatusBar({ transport, mealPeriod, idleCountdown }: Stat
             {/* Leaderboard Stats */}
             <div className="text-xs text-gray-300 mb-2">
               <div>Leaderboard Stats:</div>
-              <div>Entries: {getLeaderboardStats().totalEntries}</div>
-              <div>Avg Score: {getLeaderboardStats().averageScore}%</div>
-              <div>High Score: {getLeaderboardStats().highestScore}%</div>
+              <div>Entries: {getLeaderboardStats(leaderboard).totalEntries}</div>
+              <div>Avg Score: {getLeaderboardStats(leaderboard).averageScore}%</div>
+              <div>High Score: {getLeaderboardStats(leaderboard).highestScore}%</div>
             </div>
             
             <button

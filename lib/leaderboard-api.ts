@@ -1,5 +1,8 @@
 import { LeaderboardEntry } from './database';
 
+// Re-export types for convenience
+export type { LeaderboardEntry };
+
 // Fallback to localStorage if database is not available
 export function loadLeaderboard(): LeaderboardEntry[] {
   if (typeof window === 'undefined') {
@@ -12,7 +15,7 @@ export function loadLeaderboard(): LeaderboardEntry[] {
       if (a.score !== b.score) {
         return b.score - a.score;
       }
-      return b.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
+      return b.created_at && a.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
     });
   } catch (error) {
     console.error('Failed to load leaderboard:', error);
@@ -70,7 +73,7 @@ export async function addLeaderboardEntryToAPI(newEntry: Omit<LeaderboardEntry, 
         if (a.score !== b.score) {
           return b.score - a.score;
         }
-        return b.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
+        return b.created_at && a.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
       })
       .slice(0, 10);
     saveLeaderboard(updatedLeaderboard);

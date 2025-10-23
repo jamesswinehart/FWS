@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { 
   initializeDatabase, 
   getLeaderboard, 
-  addLeaderboardEntry, 
-  getLeaderboardStats
+  addLeaderboardEntry
 } from '../../../lib/database';
 
 // Initialize database on first request

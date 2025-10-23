@@ -1,3 +1,26 @@
+// WebHID API types (not available in all environments)
+declare global {
+  interface Navigator {
+    hid?: {
+      requestDevice(options: { filters: Array<{ usagePage: number }> }): Promise<HIDDevice[]>;
+      getDevices(): Promise<HIDDevice[]>;
+    };
+  }
+  
+  interface HIDDevice {
+    open(): Promise<void>;
+    close(): Promise<void>;
+    addEventListener(type: 'inputreport', listener: (event: HIDInputReportEvent) => void): void;
+    removeEventListener(type: 'inputreport', listener: (event: HIDInputReportEvent) => void): void;
+  }
+  
+  interface HIDInputReportEvent {
+    device: HIDDevice;
+    reportId: number;
+    data: DataView;
+  }
+}
+
 import { ScaleTransport, ScaleReading } from './transport';
 
 export class HIDScale implements ScaleTransport {

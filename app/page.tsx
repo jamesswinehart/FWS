@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useEffect, useReducer, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { MockScale } from '../transport/transport.mock';
 import { ScaleTransport } from '../transport/transport';
 import { 
   AppState, 
   AppEvent, 
   AppContext, 
-  AppAction, 
   appReducer, 
   applyActions, 
   getInitialContext 
@@ -19,11 +18,8 @@ import {
 } from '../lib/fws';
 import { 
   getCurrentMealPeriod, 
-  getMealPeriodDisplayName, 
   getMealPeriodWithTime,
-  getLastScoreFromAPI, 
-  saveScoreToAPI, 
-  compareScore 
+  saveScoreToAPI
 } from '../lib/meal-api';
 import { 
   loadLeaderboardFromAPI, 
@@ -206,8 +202,8 @@ export default function FoodWasteScoreApp() {
       const entry: Omit<LeaderboardEntry, 'id' | 'created_at'> = {
         initials: initials.toUpperCase().slice(0, 3), // Ensure 3 chars max, uppercase
         score: context.currentScore,
-        netId: context.netId, // Store for user tracking
-        mealPeriod: mealPeriod, // Track which meal this was for
+        netid: context.netId, // Store for user tracking
+        meal_period: mealPeriod, // Track which meal this was for
       };
       
       try {
@@ -295,6 +291,7 @@ export default function FoodWasteScoreApp() {
         transport={transport} 
         mealPeriod={getMealPeriodWithTime(mealPeriod)} 
         idleCountdown={context.idleCountdown}
+        leaderboard={context.leaderboard}
       />
       {renderScreen()}
     </div>

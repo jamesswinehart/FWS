@@ -1,5 +1,6 @@
 import { ScaleReading } from '../transport/transport';
 import { DishType } from './fws';
+import { LeaderboardEntry } from './database';
 
 export type AppState = 
   | 'WELCOME'
@@ -18,7 +19,8 @@ export type AppEvent =
   | { type: 'BACK' }
   | { type: 'IDLE_TICK' }
   | { type: 'IDLE_RESET' }
-  | { type: 'ERROR_OCCURRED'; error: string };
+  | { type: 'ERROR_OCCURRED'; error: string }
+  | { type: 'SET_LEADERBOARD'; payload: any[] };
 
 export interface AppContext {
   // Session data
@@ -33,11 +35,7 @@ export interface AppContext {
   errorMessage?: string;
   
   // Leaderboard
-  leaderboard: Array<{
-    initials: string;
-    score: number;
-    ts: number;
-  }>;
+  leaderboard: LeaderboardEntry[];
 }
 
 export type AppAction = 
@@ -51,7 +49,8 @@ export type AppAction =
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_SESSION' }
   | { type: 'CLEAR_DISH_DATA' }
-  | { type: 'UPDATE_LEADERBOARD'; entry: { initials: string; score: number; ts: number } };
+  | { type: 'UPDATE_LEADERBOARD'; entry: LeaderboardEntry }
+  | { type: 'SET_LEADERBOARD_DATA'; entries: any[] };
 
 export function appReducer(state: AppState, context: AppContext, event: AppEvent): {
   state: AppState;
@@ -129,6 +128,8 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
   if (event.type === 'ERROR_OCCURRED') {
     newState = 'ERROR';
     actions.push({ type: 'SET_ERROR', error: event.error });
+  } else if (event.type === 'SET_LEADERBOARD') {
+    actions.push({ type: 'SET_LEADERBOARD_DATA', entries: event.payload });
   } else if (event.type === 'IDLE_TICK' && state !== 'WELCOME' && state !== 'IDLE_WARNING' && state !== 'ERROR') {
     // Start idle warning after 40 seconds of inactivity (only in interactive states)
     console.log(`IDLE_TICK: countdown=${context.idleCountdown}, state=${state}`);
@@ -193,9 +194,18 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         break;
       case 'UPDATE_LEADERBOARD':
         const updatedLeaderboard = [...newContext.leaderboard, action.entry]
-          .sort((a, b) => b.score - a.score)
+          .sort((a, b) => {
+            if (a.score !== b.score) {
+              return b.score - a.score;
+            }
+            return b.created_at && a.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
+          })
           .slice(0, 10); // Keep top 10
         newContext.leaderboard = updatedLeaderboard;
+        break;
+      
+      case 'SET_LEADERBOARD_DATA':
+        newContext.leaderboard = action.entries;
         break;
     }
   }

@@ -1,10 +1,5 @@
 import React from 'react';
-
-interface LeaderboardEntry {
-  initials: string;
-  score: number;
-  ts: number;
-}
+import { LeaderboardEntry } from '../lib/database';
 
 interface ScreenLeaderboardProps {
   leaderboard: LeaderboardEntry[];

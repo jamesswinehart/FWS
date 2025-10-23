@@ -3,13 +3,8 @@ import {
   initializeDatabase, 
   saveUserScore, 
   getUserLastScore, 
-  getUserScores,
-  getLeaderboard, 
-  addLeaderboardEntry, 
-  getLeaderboardStats,
-  getDailyStats,
-  getMealPeriodStats
-} from '../../lib/database';
+  getUserScores
+} from '../../../lib/database';
 
 // Initialize database on first request
 let dbInitialized = false;
