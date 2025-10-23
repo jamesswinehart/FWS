@@ -186,9 +186,17 @@ export default function FoodWasteScoreApp() {
   }, [dispatch]);
 
   const handleSubmitInitials = useCallback(async (initials: string) => {
+    console.log('=== SUBMIT INITIALS DEBUG ===');
+    console.log('Initials:', initials);
+    console.log('Current score:', context.currentScore);
+    console.log('NetID:', context.netId);
+    console.log('Dish type:', context.dishType);
+    console.log('Meal period:', mealPeriod);
+    
     if (context.currentScore && context.netId) {
       // Check if score qualifies for leaderboard (minimum 50 points)
       if (!qualifiesForLeaderboard(context.currentScore)) {
+        console.log('Score too low for leaderboard:', context.currentScore);
         return;
       }
       
@@ -199,13 +207,18 @@ export default function FoodWasteScoreApp() {
         meal_period: mealPeriod, // Track which meal this was for
       };
       
+      console.log('Creating leaderboard entry:', entry);
+      
       try {
+        console.log('Attempting to add to leaderboard...');
         // Add to leaderboard using the database API
         const updatedLeaderboard = await addLeaderboardEntryToAPI(entry);
+        console.log('Successfully added to leaderboard:', updatedLeaderboard);
         
         // Update context
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
         
+        console.log('Attempting to save user score...');
         // Save user's score for this meal period to database
         await saveScoreToAPI(
           context.netId, 
@@ -214,6 +227,7 @@ export default function FoodWasteScoreApp() {
           context.dishType || 'plate',
           context.stableReadings?.[context.stableReadings.length - 1]?.grams || 0
         );
+        console.log('Successfully saved user score');
         
       } catch (error) {
         console.error('Failed to save to database:', error);
@@ -223,6 +237,8 @@ export default function FoodWasteScoreApp() {
           .slice(0, 10);
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
       }
+    } else {
+      console.log('Missing required data:', { currentScore: context.currentScore, netId: context.netId });
     }
   }, [context.currentScore, context.netId, mealPeriod]);
 
