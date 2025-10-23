@@ -1,5 +1,23 @@
 # Vercel Postgres Database Setup Guide
 
+## 🔐 Password Protection
+
+The kiosk app now includes password protection! Set up authentication by adding environment variables.
+
+### Authentication Setup
+
+1. **Set Kiosk Password**:
+   ```bash
+   KIOSK_PASSWORD=your_secure_password_here
+   ```
+
+2. **Default Password**: If not set, defaults to `admin123`
+
+3. **Access Control**:
+   - Users must enter the password to access the kiosk
+   - Session lasts 24 hours
+   - Logout button available in debug panel (press 'D')
+
 ## 1. Create Vercel Postgres Database
 
 1. Go to your Vercel dashboard

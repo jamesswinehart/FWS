@@ -38,6 +38,15 @@ export default function StatusBar({ transport, mealPeriod, idleCountdown, leader
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
   return (
     <div className="absolute top-4 left-4 z-50">
       <div className="bg-gray-800 bg-opacity-90 rounded-lg p-3 text-sm text-white">
@@ -95,9 +104,15 @@ export default function StatusBar({ transport, mealPeriod, idleCountdown, leader
                 // Force idle countdown to 0
                 window.dispatchEvent(new CustomEvent('forceIdle'));
               }}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs transition-colors ml-2"
+              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs transition-colors mr-2"
             >
               Force Idle
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs transition-colors"
+            >
+              Logout
             </button>
           </div>
         )}
