@@ -162,16 +162,22 @@ export default function FoodWasteScoreApp() {
 
   // Event handlers
   const handleSubmitNetId = useCallback((netId: string) => {
+    console.log('=== SUBMIT NETID DEBUG ===');
+    console.log('NetID submitted:', netId);
     dispatch({ type: 'SUBMIT_NETID', netId });
   }, [dispatch]);
 
   const handleSelectDish = useCallback((dishType: DishType) => {
+    console.log('=== SELECT DISH DEBUG ===');
+    console.log('Dish type selected:', dishType);
     dispatch({ type: 'SELECT_DISH', dishType });
   }, [dispatch]);
 
   const handleShowLeaderboard = useCallback(() => {
+    console.log('=== SHOW LEADERBOARD DEBUG ===');
+    console.log('Current score:', context.currentScore);
     dispatch({ type: 'SHOW_LEADERBOARD' });
-  }, [dispatch]);
+  }, [dispatch, context.currentScore]);
 
   const handleExit = useCallback(() => {
     dispatch({ type: 'EXIT' });
