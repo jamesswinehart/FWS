@@ -55,8 +55,6 @@ export default function FoodWasteScoreApp() {
   
   React.useEffect(() => {
     contextRef.current = context;
-    console.log('=== CONTEXT UPDATED ===');
-    console.log('New context:', context);
   }, [context]);
   
   const [transport] = React.useState<ScaleTransport>(() => new MockScale());
@@ -64,14 +62,7 @@ export default function FoodWasteScoreApp() {
 
   // Dispatch function for state machine
   const dispatch = useCallback((event: AppEvent) => {
-    console.log('=== DISPATCH DEBUG ===');
-    console.log('Event:', event.type);
-    console.log('Current state:', stateRef.current);
-    console.log('Current context:', contextRef.current);
-    
     const result = appReducer(stateRef.current, contextRef.current, event);
-    console.log('Reducer result:', result);
-    
     setState(result.state);
     setContext(applyActions(result.context, result.actions));
   }, []);
@@ -177,22 +168,16 @@ export default function FoodWasteScoreApp() {
 
   // Event handlers
   const handleSubmitNetId = useCallback((netId: string) => {
-    console.log('=== SUBMIT NETID DEBUG ===');
-    console.log('NetID submitted:', netId);
     dispatch({ type: 'SUBMIT_NETID', netId });
   }, [dispatch]);
 
   const handleSelectDish = useCallback((dishType: DishType) => {
-    console.log('=== SELECT DISH DEBUG ===');
-    console.log('Dish type selected:', dishType);
     dispatch({ type: 'SELECT_DISH', dishType });
   }, [dispatch]);
 
   const handleShowLeaderboard = useCallback(() => {
-    console.log('=== SHOW LEADERBOARD DEBUG ===');
-    console.log('Current score:', context.currentScore);
     dispatch({ type: 'SHOW_LEADERBOARD' });
-  }, [dispatch, context.currentScore]);
+  }, [dispatch]);
 
   const handleExit = useCallback(() => {
     dispatch({ type: 'EXIT' });
@@ -207,17 +192,9 @@ export default function FoodWasteScoreApp() {
   }, [dispatch]);
 
   const handleSubmitInitials = useCallback(async (initials: string) => {
-    console.log('=== SUBMIT INITIALS DEBUG ===');
-    console.log('Initials:', initials);
-    console.log('Current score:', context.currentScore);
-    console.log('NetID:', context.netId);
-    console.log('Dish type:', context.dishType);
-    console.log('Meal period:', mealPeriod);
-    
     if (context.currentScore && context.netId) {
       // Check if score qualifies for leaderboard (minimum 50 points)
       if (!qualifiesForLeaderboard(context.currentScore)) {
-        console.log('Score too low for leaderboard:', context.currentScore);
         return;
       }
       
@@ -228,10 +205,7 @@ export default function FoodWasteScoreApp() {
         meal_period: mealPeriod, // Track which meal this was for
       };
       
-      console.log('Creating leaderboard entry:', entry);
-      
       try {
-        console.log('Attempting to add to leaderboard...');
         console.log('=== ATTEMPTING TO SUBMIT TO DATABASE ===');
         console.log('Leaderboard entry:', entry);
         console.log('User score data:', {
@@ -249,7 +223,6 @@ export default function FoodWasteScoreApp() {
         // Update context
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
         
-        console.log('Attempting to save user score...');
         // Save user's score for this meal period to database
         await saveScoreToAPI(
           context.netId, 
@@ -268,8 +241,6 @@ export default function FoodWasteScoreApp() {
           .slice(0, 10);
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
       }
-    } else {
-      console.log('Missing required data:', { currentScore: context.currentScore, netId: context.netId });
     }
   }, [context.currentScore, context.netId, mealPeriod]);
 
