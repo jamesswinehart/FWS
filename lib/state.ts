@@ -132,7 +132,6 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     actions.push({ type: 'SET_LEADERBOARD_DATA', entries: event.payload });
   } else if (event.type === 'IDLE_TICK' && state !== 'WELCOME' && state !== 'IDLE_WARNING' && state !== 'ERROR') {
     // Start idle warning after 40 seconds of inactivity (only in interactive states)
-    console.log(`IDLE_TICK: countdown=${context.idleCountdown}, state=${state}`);
     if (context.idleCountdown <= 0) {
       newState = 'IDLE_WARNING';
       actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: 5 });
