@@ -82,7 +82,6 @@ export default function FoodWasteScoreApp() {
           console.log('Raw weight:', reading.grams, 'grams');
           console.log('Dish type:', contextRef.current.dishType);
           console.log('Calculated score:', score);
-          console.log('Attempting to submit score to database...');
           
           dispatch({ type: 'SET_SCORE', score } as any);
           setState('SCORE');
@@ -192,9 +191,19 @@ export default function FoodWasteScoreApp() {
   }, [dispatch]);
 
   const handleSubmitInitials = useCallback(async (initials: string) => {
+    console.log('=== SUBMIT INITIALS CALLED ===');
+    console.log('Initials:', initials);
+    console.log('Context check:', {
+      currentScore: context.currentScore,
+      netId: context.netId,
+      dishType: context.dishType,
+      mealPeriod: mealPeriod
+    });
+    
     if (context.currentScore && context.netId) {
       // Check if score qualifies for leaderboard (minimum 50 points)
       if (!qualifiesForLeaderboard(context.currentScore)) {
+        console.log('Score too low for leaderboard:', context.currentScore);
         return;
       }
       
@@ -241,6 +250,8 @@ export default function FoodWasteScoreApp() {
           .slice(0, 10);
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
       }
+    } else {
+      console.log('Missing required data - cannot submit to database');
     }
   }, [context.currentScore, context.netId, mealPeriod]);
 
