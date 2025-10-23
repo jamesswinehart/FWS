@@ -55,6 +55,8 @@ export default function FoodWasteScoreApp() {
   
   React.useEffect(() => {
     contextRef.current = context;
+    console.log('=== CONTEXT UPDATED ===');
+    console.log('New context:', context);
   }, [context]);
   
   const [transport] = React.useState<ScaleTransport>(() => new MockScale());
@@ -62,7 +64,14 @@ export default function FoodWasteScoreApp() {
 
   // Dispatch function for state machine
   const dispatch = useCallback((event: AppEvent) => {
+    console.log('=== DISPATCH DEBUG ===');
+    console.log('Event:', event.type);
+    console.log('Current state:', stateRef.current);
+    console.log('Current context:', contextRef.current);
+    
     const result = appReducer(stateRef.current, contextRef.current, event);
+    console.log('Reducer result:', result);
+    
     setState(result.state);
     setContext(applyActions(result.context, result.actions));
   }, []);
