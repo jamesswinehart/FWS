@@ -8,10 +8,12 @@ interface StatusBarProps {
   mealPeriod: string;
   idleCountdown?: number;
   leaderboard?: LeaderboardEntry[];
+  onDebugWeightChange?: (weight: number) => void;
 }
 
-export default function StatusBar({ transport, mealPeriod, idleCountdown, leaderboard = [] }: StatusBarProps) {
+export default function StatusBar({ transport, mealPeriod, idleCountdown, leaderboard = [], onDebugWeightChange }: StatusBarProps) {
   const [showDebug, setShowDebug] = React.useState(false);
+  const [debugWeight, setDebugWeight] = React.useState(50); // Default debug weight
 
   React.useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -114,6 +116,66 @@ export default function StatusBar({ transport, mealPeriod, idleCountdown, leader
             >
               Logout
             </button>
+            
+            {/* Debug Weight Controls */}
+            <div className="mt-3 pt-2 border-t border-gray-600">
+              <div className="text-xs text-gray-300 mb-2">
+                Debug Net Weight (g):
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="number"
+                  value={debugWeight}
+                  onChange={(e) => {
+                    const weight = parseInt(e.target.value) || 0;
+                    setDebugWeight(weight);
+                    onDebugWeightChange?.(weight);
+                  }}
+                  className="w-16 px-2 py-1 bg-gray-700 text-white text-xs rounded border border-gray-600"
+                  min="0"
+                  max="500"
+                />
+                <button
+                  onClick={() => {
+                    setDebugWeight(0);
+                    onDebugWeightChange?.(0);
+                  }}
+                  className="px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs transition-colors"
+                >
+                  0g (Perfect)
+                </button>
+                <button
+                  onClick={() => {
+                    setDebugWeight(30);
+                    onDebugWeightChange?.(30);
+                  }}
+                  className="px-2 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs transition-colors"
+                >
+                  30g
+                </button>
+                <button
+                  onClick={() => {
+                    setDebugWeight(60);
+                    onDebugWeightChange?.(60);
+                  }}
+                  className="px-2 py-1 bg-orange-600 hover:bg-orange-700 rounded text-xs transition-colors"
+                >
+                  60g
+                </button>
+                <button
+                  onClick={() => {
+                    setDebugWeight(100);
+                    onDebugWeightChange?.(100);
+                  }}
+                  className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-xs transition-colors"
+                >
+                  100g
+                </button>
+              </div>
+              <div className="text-xs text-gray-400">
+                This overrides the scale reading for testing different scores
+              </div>
+            </div>
           </div>
         )}
       </div>

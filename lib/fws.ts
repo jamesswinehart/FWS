@@ -9,27 +9,70 @@ export const DISH_TARE_WEIGHTS: Record<DishType, number> = {
   cereal: 100,
 };
 
+// Baseline weights for different dish types (in grams)
+// These represent typical food waste weight without the FWS interface
+export const DISH_BASELINE_WEIGHTS: Record<DishType, number> = {
+  plate: 60,    // Typical plate waste baseline
+  salad: 40,    // Typical salad waste baseline  
+  cereal: 30,  // Typical cereal waste baseline
+};
+
+// Decay constants for different dish types (in grams)
+// These control how fast the score falls for waste above baseline
+// Using τ = h / ln(2) where h is half-life in grams
+export const DISH_DECAY_CONSTANTS: Record<DishType, number> = {
+  plate: 43.3,  // ~30g half-life (30 / ln(2) ≈ 43.3)
+  salad: 28.9,  // ~20g half-life (20 / ln(2) ≈ 28.9)
+  cereal: 21.6, // ~15g half-life (15 / ln(2) ≈ 21.6)
+};
+
 /**
- * Calculate Food Waste Score using logistic function (bounded 0-100)
- * @param weightGrams - Weight in grams
- * @param baselineG - Baseline weight for 50% score (default 60g)
- * @param sensitivity - Sensitivity parameter (default 60g)
+ * Calculate Food Waste Score using exponential decay function (bounded 0-100)
+ * Formula: FWS = 100 * e^(-Δ/τ) where Δ = max(0, w - B)
+ * @param weightGrams - Discarded weight in grams (w)
+ * @param baselineG - Baseline/goal weight in grams (B)
+ * @param decayConstant - Decay constant in grams (τ)
  * @returns Score from 0-100
  */
-export function fws(weightGrams: number, baselineG = 60, sensitivity = 60): number {
-  return Math.round(100 / (1 + Math.exp((weightGrams - baselineG) / sensitivity)));
+export function fws(weightGrams: number, baselineG = 60, decayConstant = 43.3): number {
+  // If no waste, return perfect score
+  if (weightGrams <= 0) {
+    return 100;
+  }
+  
+  // Calculate excess waste above baseline: Δ = max(0, w - B)
+  const delta = Math.max(0, weightGrams - baselineG);
+  
+  // Calculate score using exponential decay: FWS = 100 * e^(-Δ/τ)
+  const score = 100 * Math.exp(-delta / decayConstant);
+  
+  // Clamp to range [0, 100] and round
+  return Math.round(Math.max(0, Math.min(100, score)));
 }
 
 /**
- * Calculate score for a dish with tare adjustment
+ * Calculate score for a dish with tare adjustment and dish-specific parameters
  * @param weightGrams - Raw weight from scale
  * @param dishType - Type of dish
- * @returns Adjusted score
+ * @param debugWeightOverride - Optional debug override for net weight (bypasses tare calculation)
+ * @returns Adjusted score using dish-specific baseline and decay constants
  */
-export function calculateDishScore(weightGrams: number, dishType: DishType): number {
-  const tareWeight = DISH_TARE_WEIGHTS[dishType];
-  const adjustedWeight = Math.max(0, weightGrams - tareWeight);
-  return fws(adjustedWeight);
+export function calculateDishScore(weightGrams: number, dishType: DishType, debugWeightOverride?: number): number {
+  // Use debug override if provided, otherwise calculate normally
+  const adjustedWeight = debugWeightOverride !== undefined 
+    ? debugWeightOverride 
+    : Math.max(0, weightGrams - DISH_TARE_WEIGHTS[dishType]);
+  
+  // If no food waste (empty dish), return perfect score
+  if (adjustedWeight <= 0) {
+    return 100;
+  }
+  
+  const baselineWeight = DISH_BASELINE_WEIGHTS[dishType];
+  const decayConstant = DISH_DECAY_CONSTANTS[dishType];
+  
+  // Calculate score using dish-specific parameters
+  return fws(adjustedWeight, baselineWeight, decayConstant);
 }
 
 /**

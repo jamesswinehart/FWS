@@ -9,7 +9,6 @@ export type AppState =
   | 'DISH_TYPE'
   | 'SCORE'
   | 'LEADERBOARD'
-  | 'IDLE_WARNING'
   | 'ERROR';
 
 export type AppEvent = 
@@ -22,19 +21,28 @@ export type AppEvent =
   | { type: 'IDLE_TICK' }
   | { type: 'IDLE_RESET' }
   | { type: 'ERROR_OCCURRED'; error: string }
-  | { type: 'SET_LEADERBOARD'; payload: any[] };
+  | { type: 'SET_LEADERBOARD'; payload: any[] }
+  | { type: 'SET_PREVIOUS_SCORE'; score: number | null }
+  | { type: 'SET_DEBUG_WEIGHT'; weight: number | null };
 
 export interface AppContext {
   // Session data
   netId?: string;
   dishType?: DishType;
   currentScore?: number;
+  previousScore?: number; // Store user's previous score for comparison
   readings: ScaleReading[];
   stableReadings: ScaleReading[];
   
   // UI state
   idleCountdown: number;
   errorMessage?: string;
+  previousState?: AppState; // Track state before idle warning
+  showIdleWarning: boolean; // Flag to show idle modal overlay
+  scoreSaved: boolean; // Flag to prevent duplicate score saves
+  
+  // Debug
+  debugWeightOverride?: number; // Debug override for net weight
   
   // Leaderboard
   leaderboard: LeaderboardEntry[];
@@ -46,11 +54,18 @@ export type AppAction =
   | { type: 'SET_DISH_TYPE'; dishType: DishType }
   | { type: 'ADD_READING'; reading: ScaleReading }
   | { type: 'SET_SCORE'; score: number }
+  | { type: 'SET_PREVIOUS_SCORE'; score: number | null }
+  | { type: 'SET_DEBUG_WEIGHT'; weight: number | null }
+  | { type: 'SAVE_SCORE_TO_DB'; netId: string; dishType: DishType; score: number; weightGrams: number }
+  | { type: 'SET_SCORE_SAVED'; saved: boolean }
   | { type: 'SET_IDLE_COUNTDOWN'; countdown: number }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_SESSION' }
   | { type: 'CLEAR_DISH_DATA' }
+  | { type: 'SET_PREVIOUS_STATE'; state: AppState }
+  | { type: 'SHOW_IDLE_WARNING' }
+  | { type: 'HIDE_IDLE_WARNING' }
   | { type: 'UPDATE_LEADERBOARD'; entry: LeaderboardEntry }
   | { type: 'SET_LEADERBOARD_DATA'; entries: any[] };
 
@@ -80,8 +95,9 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         // Calculate score using the latest reading
         if (context.readings.length > 0) {
           const latestReading = context.readings[context.readings.length - 1];
-          const score = calculateDishScore(latestReading.grams, event.dishType);
+          const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
           actions.push({ type: 'SET_SCORE', score });
+          // Don't save score yet - wait for user to complete score interaction
         }
       } else if (event.type === 'BACK') {
         newState = 'WELCOME';
@@ -92,8 +108,21 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     case 'SCORE':
       if (event.type === 'SHOW_LEADERBOARD') {
         newState = 'LEADERBOARD';
+        // Don't save score when going to leaderboard - wait for exit
       } else if (event.type === 'EXIT') {
         newState = 'WELCOME';
+        // Save score when user exits
+        if (context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
         actions.push({ type: 'RESET_SESSION' });
       } else if (event.type === 'BACK') {
         newState = 'DISH_TYPE';
@@ -104,25 +133,24 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     case 'LEADERBOARD':
       if (event.type === 'EXIT') {
         newState = 'WELCOME';
+        // Save score when user exits leaderboard
+        if (context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
         actions.push({ type: 'RESET_SESSION' });
       } else if (event.type === 'BACK') {
         newState = 'SCORE';
       }
       break;
 
-    case 'IDLE_WARNING':
-      if (event.type === 'IDLE_TICK') {
-        if (context.idleCountdown <= 1) {
-          newState = 'WELCOME';
-          actions.push({ type: 'RESET_SESSION' });
-        } else {
-          actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: context.idleCountdown - 1 });
-        }
-      } else if (event.type === 'IDLE_RESET') {
-        newState = 'WELCOME';
-        actions.push({ type: 'RESET_SESSION' });
-      }
-      break;
 
     case 'ERROR':
       if (event.type === 'EXIT') {
@@ -139,14 +167,44 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     actions.push({ type: 'SET_ERROR', error: event.error });
   } else if (event.type === 'SET_LEADERBOARD') {
     actions.push({ type: 'SET_LEADERBOARD_DATA', entries: event.payload });
-  } else if (event.type === 'IDLE_TICK' && state !== 'WELCOME' && state !== 'IDLE_WARNING' && state !== 'ERROR') {
-    // Start idle warning after 40 seconds of inactivity (only in interactive states)
-    if (context.idleCountdown <= 0) {
-      newState = 'IDLE_WARNING';
+  } else if (event.type === 'SET_PREVIOUS_SCORE') {
+    actions.push({ type: 'SET_PREVIOUS_SCORE', score: event.score });
+  } else if (event.type === 'SET_DEBUG_WEIGHT') {
+    actions.push({ type: 'SET_DEBUG_WEIGHT', weight: event.weight });
+  } else if (event.type === 'IDLE_TICK' && state !== 'WELCOME' && state !== 'ERROR') {
+    // Start idle warning after 25 seconds of inactivity (only in interactive states)
+    if (context.idleCountdown <= 0 && !context.showIdleWarning) {
+      // Don't change state, just show the modal overlay
+      actions.push({ type: 'SHOW_IDLE_WARNING' });
       actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: 5 });
+    } else if (context.showIdleWarning) {
+      // Handle countdown when warning is already showing
+      if (context.idleCountdown <= 1) {
+        // Save score before resetting if we're in SCORE or LEADERBOARD state
+        if ((state === 'SCORE' || state === 'LEADERBOARD') && context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
+        newState = 'WELCOME';
+        actions.push({ type: 'RESET_SESSION' });
+        actions.push({ type: 'HIDE_IDLE_WARNING' });
+      } else {
+        actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: context.idleCountdown - 1 });
+      }
     } else {
       actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: context.idleCountdown - 1 });
     }
+  } else if (event.type === 'IDLE_RESET') {
+    // Hide the idle warning modal and reset countdown
+    actions.push({ type: 'HIDE_IDLE_WARNING' });
+    actions.push({ type: 'SET_IDLE_COUNTDOWN', countdown: 25 });
   }
 
   // Handle reading updates
@@ -189,6 +247,11 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         newContext.currentScore = action.score;
         console.log('New context after SET_SCORE:', newContext);
         break;
+      case 'SAVE_SCORE_TO_DB':
+        console.log('=== SAVE_SCORE_TO_DB ACTION ===');
+        console.log('Database save action triggered - handled in main component');
+        // This action is handled asynchronously in the main component
+        break;
       case 'SET_IDLE_COUNTDOWN':
         newContext.idleCountdown = action.countdown;
         break;
@@ -205,8 +268,11 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         newContext.netId = undefined;
         newContext.dishType = undefined;
         newContext.currentScore = undefined;
+        newContext.previousScore = undefined; // Reset previous score
         newContext.readings = [];
         newContext.stableReadings = [];
+        newContext.scoreSaved = false; // Reset score saved flag
+        newContext.debugWeightOverride = undefined; // Reset debug weight
         newContext.idleCountdown = 25; // Reset to 25 seconds
         console.log('New context after RESET_SESSION:', newContext);
         break;
@@ -218,8 +284,27 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         newContext.currentScore = undefined;
         newContext.readings = [];
         newContext.stableReadings = [];
+        newContext.scoreSaved = false; // Reset score saved flag
         console.log('New context after CLEAR_DISH_DATA:', newContext);
         break;
+    case 'SET_PREVIOUS_STATE':
+      newContext.previousState = action.state;
+      break;
+    case 'SHOW_IDLE_WARNING':
+      newContext.showIdleWarning = true;
+      break;
+    case 'HIDE_IDLE_WARNING':
+      newContext.showIdleWarning = false;
+      break;
+    case 'SET_SCORE_SAVED':
+      newContext.scoreSaved = action.saved;
+      break;
+    case 'SET_PREVIOUS_SCORE':
+      newContext.previousScore = action.score || undefined;
+      break;
+    case 'SET_DEBUG_WEIGHT':
+      newContext.debugWeightOverride = action.weight || undefined;
+      break;
       case 'UPDATE_LEADERBOARD':
         const updatedLeaderboard = [...newContext.leaderboard, action.entry]
           .sort((a, b) => {
@@ -246,9 +331,12 @@ export function getInitialContext(): AppContext {
     netId: undefined,
     dishType: undefined,
     currentScore: 0, // Initialize to 0 instead of undefined
+    previousScore: undefined, // Initialize previous score
     readings: [],
     stableReadings: [],
     idleCountdown: 25,
+    showIdleWarning: false,
+    scoreSaved: false, // Initialize score saved flag
     leaderboard: [],
   };
 }

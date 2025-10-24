@@ -13,9 +13,10 @@ export function loadLeaderboard(): LeaderboardEntry[] {
     const entries = stored ? JSON.parse(stored) : [];
     return entries.sort((a: LeaderboardEntry, b: LeaderboardEntry) => {
       if (a.score !== b.score) {
-        return b.score - a.score;
+        return b.score - a.score; // Higher scores first
       }
-      return b.created_at && a.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
+      // For same scores, earlier submissions (lower timestamp) get higher rank
+      return a.created_at && b.created_at ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime() : 0;
     });
   } catch (error) {
     console.error('Failed to load leaderboard:', error);
@@ -36,7 +37,8 @@ export function saveLeaderboard(entries: LeaderboardEntry[]): void {
 
 export async function loadLeaderboardFromAPI(): Promise<LeaderboardEntry[]> {
   try {
-    const response = await fetch('/api/leaderboard');
+    // Temporarily increase limit to see all entries
+    const response = await fetch('/api/leaderboard?limit=50');
     if (!response.ok) {
       throw new Error('Failed to fetch leaderboard');
     }
@@ -71,9 +73,10 @@ export async function addLeaderboardEntryToAPI(newEntry: Omit<LeaderboardEntry, 
     const updatedLeaderboard = [...currentLeaderboard, newEntry as LeaderboardEntry]
       .sort((a, b) => {
         if (a.score !== b.score) {
-          return b.score - a.score;
+          return b.score - a.score; // Higher scores first
         }
-        return b.created_at && a.created_at ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime() : 0;
+        // For same scores, earlier submissions (lower timestamp) get higher rank
+        return a.created_at && b.created_at ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime() : 0;
       })
       .slice(0, 10);
     saveLeaderboard(updatedLeaderboard);

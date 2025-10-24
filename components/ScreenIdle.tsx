@@ -6,26 +6,35 @@ interface ScreenIdleProps {
 }
 
 export default function ScreenIdle({ countdown, onCancel }: ScreenIdleProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    // If clicking anywhere on the screen (not just the button), cancel idle
+    onCancel();
+  };
+
   return (
-    <div className="min-h-screen bg-dark-slate flex items-center justify-center p-8">
-      {/* Large circular ring background */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-96 h-96 border-8 border-slate-700 rounded-full opacity-50"></div>
-      </div>
-      
+    <div 
+      className="cursor-pointer max-w-md mx-auto relative"
+      onClick={handleClick}
+    >
       <div className="relative z-10 text-center">
-        <h1 className="text-6xl font-bold text-white mb-8">
+        <h1 className="text-5xl font-bold text-white mb-6">
           Still there?
         </h1>
-        <p className="text-4xl text-white mb-12">
+        <p className="text-3xl text-white mb-8">
           Starting over in {countdown}...
         </p>
         <button
-          onClick={onCancel}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent double-trigger
+            onCancel();
+          }}
           className="px-8 py-4 bg-white text-gray-900 rounded-lg text-xl font-semibold hover:bg-gray-100 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500"
         >
           CONTINUE
         </button>
+        <p className="text-lg text-gray-400 mt-4">
+          Click anywhere to continue
+        </p>
       </div>
     </div>
   );

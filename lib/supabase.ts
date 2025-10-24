@@ -129,33 +129,43 @@ export async function getUserScores(netid: string) {
 // Leaderboard functions
 export async function getLeaderboard(limit: number = 10) {
   try {
+    console.log('📊 Supabase: Getting leaderboard with limit:', limit);
     const { data, error } = await supabase
       .from('leaderboard_entries')
       .select('initials, score, netid, meal_period, created_at')
-      .order('score', { ascending: false })
-      .order('created_at', { ascending: false })
+      .order('score', { ascending: false }) // Higher scores first
+      .order('created_at', { ascending: true }) // Earlier submissions first (for tie-breaking)
       .limit(limit);
-    
-    if (error) throw error;
+
+    if (error) {
+      console.error('❌ Supabase error getting leaderboard:', error);
+      throw error;
+    }
+    console.log('📊 Supabase: Retrieved leaderboard entries:', data);
     return data || [];
   } catch (error) {
-    console.error('Failed to get leaderboard:', error);
+    console.error('❌ Failed to get leaderboard:', error);
     throw error;
   }
 }
 
 export async function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | 'created_at'>) {
   try {
+    console.log('💾 Supabase: Adding leaderboard entry:', entry);
     const { data, error } = await supabase
       .from('leaderboard_entries')
       .insert([entry])
       .select()
       .single();
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      throw error;
+    }
+    console.log('✅ Supabase: Successfully added leaderboard entry:', data);
     return data;
   } catch (error) {
-    console.error('Failed to add leaderboard entry:', error);
+    console.error('❌ Failed to add leaderboard entry:', error);
     throw error;
   }
 }

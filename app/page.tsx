@@ -43,6 +43,7 @@ export default function FoodWasteScoreApp() {
     ...getInitialContext(),
     leaderboard: [],
   }));
+  const [debugWeightOverride, setDebugWeightOverride] = React.useState<number | null>(null);
   
   // Use refs to avoid dependency issues
   const stateRef = React.useRef(state);
@@ -62,21 +63,51 @@ export default function FoodWasteScoreApp() {
 
   // Dispatch function for state machine
   const dispatch = useCallback((event: AppEvent) => {
-    console.log('=== STATE TRANSITION ===');
-    console.log('Event:', event.type);
-    console.log('From state:', stateRef.current);
-    console.log('Context before:', {
-      netId: contextRef.current.netId,
-      dishType: contextRef.current.dishType,
-      currentScore: contextRef.current.currentScore
-    });
+    // Only log non-IDLE_TICK events to reduce spam
+    if (event.type !== 'IDLE_TICK') {
+      console.log('=== STATE TRANSITION ===');
+      console.log('Event:', event.type);
+      console.log('From state:', stateRef.current);
+      console.log('Context before:', {
+        netId: contextRef.current.netId,
+        dishType: contextRef.current.dishType,
+        currentScore: contextRef.current.currentScore,
+        idleCountdown: contextRef.current.idleCountdown,
+        showIdleWarning: contextRef.current.showIdleWarning
+      });
+    } else {
+      // Log idle tick every 5 seconds to reduce spam
+      if (contextRef.current.idleCountdown % 5 === 0) {
+        console.log('⏰ Idle tick:', contextRef.current.idleCountdown, 'seconds remaining, showIdleWarning:', contextRef.current.showIdleWarning);
+      }
+    }
     
     const result = appReducer(stateRef.current, contextRef.current, event);
     console.log('To state:', result.state);
     console.log('Actions:', result.actions.map(a => a.type));
     
     setState(result.state);
-    setContext(applyActions(result.context, result.actions));
+    const newContext = applyActions(result.context, result.actions);
+    setContext(newContext);
+    
+    // Handle database save action
+    const saveScoreAction = result.actions.find(a => a.type === 'SAVE_SCORE_TO_DB');
+    if (saveScoreAction && saveScoreAction.type === 'SAVE_SCORE_TO_DB') {
+      console.log('=== SAVING SCORE TO DATABASE ===');
+      console.log('NetID:', saveScoreAction.netId);
+      console.log('Dish Type:', saveScoreAction.dishType);
+      console.log('Score:', saveScoreAction.score);
+      console.log('Weight:', saveScoreAction.weightGrams, 'grams');
+      
+      // Save to database asynchronously
+      saveScoreToAPI(saveScoreAction.netId, mealPeriod, saveScoreAction.score, saveScoreAction.dishType, saveScoreAction.weightGrams)
+        .then(() => {
+          console.log('Score saved to database successfully');
+        })
+        .catch((error) => {
+          console.error('Failed to save score to database:', error);
+        });
+    }
   }, []);
 
   // Handle scale readings
@@ -117,26 +148,83 @@ export default function FoodWasteScoreApp() {
   // Test idle timer functionality
   useEffect(() => {
     const handleTestIdle = () => {
+      console.log('Test idle triggered - setting countdown to 0');
       setContext(prev => ({ ...prev, idleCountdown: 0 }));
     };
 
     const handleForceIdle = () => {
-      setContext(prev => ({ ...prev, idleCountdown: 0 }));
+      console.log('Force idle triggered - showing idle warning');
+      setContext(prev => ({ ...prev, showIdleWarning: true, idleCountdown: 5 }));
     };
 
     window.addEventListener('testIdle', handleTestIdle);
     window.addEventListener('forceIdle', handleForceIdle);
+    
+    // Add console commands for testing
+    (window as any).testIdle = () => {
+      console.log('Testing idle timer...');
+      setContext(prev => ({ ...prev, idleCountdown: 0 }));
+    };
+    
+    (window as any).forceIdle = () => {
+      console.log('Forcing idle warning...');
+      setContext(prev => ({ ...prev, showIdleWarning: true, idleCountdown: 5 }));
+    };
+    
+    (window as any).testLeaderboard = async () => {
+      console.log('Testing leaderboard submission...');
+      try {
+        const testEntry = {
+          initials: 'TES',
+          score: 85,
+          netid: 'testuser',
+          meal_period: 'other' as const
+        };
+        console.log('Submitting test entry:', testEntry);
+        const result = await addLeaderboardEntryToAPI(testEntry);
+        console.log('  Test submission result:', result);
+      } catch (error) {
+        console.error('  Test submission failed:', error);
+      }
+    };
+    
+    (window as any).checkLeaderboard = async () => {
+      console.log('🔍 Checking current leaderboard...');
+      try {
+        const response = await fetch('/api/leaderboard?limit=50');
+        const entries = await response.json();
+        console.log('🔍 Current leaderboard entries:', entries);
+        console.log('🔍 Total entries:', entries.length);
+        console.log('🔍 Scores:', entries.map((e: any) => `${e.initials}: ${e.score}%`));
+      } catch (error) {
+        console.error('🔍 Failed to check leaderboard:', error);
+      }
+    };
+    
     return () => {
       window.removeEventListener('testIdle', handleTestIdle);
       window.removeEventListener('forceIdle', handleForceIdle);
+      delete (window as any).testIdle;
+      delete (window as any).forceIdle;
+      delete (window as any).testLeaderboard;
+      delete (window as any).checkLeaderboard;
     };
   }, []);
 
   // Reset inactivity timer on user interaction
   useEffect(() => {
-    const handleUserActivity = () => {
-      if (stateRef.current !== 'IDLE_WARNING' && stateRef.current !== 'ERROR') {
-        setContext(prev => ({ ...prev, idleCountdown: 25 }));
+    const handleUserActivity = (e: Event) => {
+      // Don't reset if clicking on the idle modal overlay
+      if (e.target && (e.target as Element).closest('.idle-modal-overlay')) {
+        return;
+      }
+      
+      if (stateRef.current !== 'ERROR') {
+        setContext(prev => ({ 
+          ...prev, 
+          idleCountdown: 25,
+          showIdleWarning: false // Hide idle warning on any user activity
+        }));
       }
     };
 
@@ -158,19 +246,41 @@ export default function FoodWasteScoreApp() {
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
+        console.log('🔄 Loading leaderboard on mount...');
+        // Temporarily increase limit to see all entries
         const entries = await loadLeaderboardFromAPI();
+        console.log('📊 Loaded leaderboard entries:', entries);
+        console.log('📊 Total entries found:', entries.length);
         dispatch({ type: 'SET_LEADERBOARD', payload: entries });
       } catch (error) {
-        console.error('Failed to load leaderboard:', error);
+        console.error('❌ Failed to load leaderboard:', error);
       }
     };
     loadLeaderboard();
   }, []);
 
   // Event handlers
-  const handleSubmitNetId = useCallback((netId: string) => {
+  const handleSubmitNetId = useCallback(async (netId: string) => {
     dispatch({ type: 'SUBMIT_NETID', netId });
-  }, [dispatch]);
+    
+    // Fetch previous score for comparison
+    try {
+      console.log('🔍 Fetching previous score for NetID:', netId);
+      const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
+      if (response.ok) {
+        const data = await response.json();
+        const previousScore = data?.score || null;
+        console.log('🔍 Previous score found:', previousScore);
+        dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
+      } else {
+        console.log('🔍 No previous score found for NetID:', netId);
+        dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch previous score:', error);
+      dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+    }
+  }, [dispatch, mealPeriod]);
 
   const handleSelectDish = useCallback((dishType: DishType) => {
     console.log('=== DISH SELECTED ===');
@@ -206,12 +316,14 @@ export default function FoodWasteScoreApp() {
       mealPeriod: mealPeriod
     });
     
-    if (context.currentScore && context.netId) {
+    if (context.currentScore !== undefined && context.currentScore !== null && context.netId) {
       // Check if score qualifies for leaderboard (minimum 50 points)
+      console.log('Checking qualification for score:', context.currentScore);
       if (!qualifiesForLeaderboard(context.currentScore)) {
-        console.log('Score too low for leaderboard:', context.currentScore);
+        console.log('❌ Score too low for leaderboard:', context.currentScore, '(minimum 50 required)');
         return;
       }
+      console.log('✅ Score qualifies for leaderboard:', context.currentScore);
       
       const entry: Omit<LeaderboardEntry, 'id' | 'created_at'> = {
         initials: initials.toUpperCase().slice(0, 3), // Ensure 3 chars max, uppercase
@@ -232,21 +344,16 @@ export default function FoodWasteScoreApp() {
         });
         
         // Add to leaderboard using the database API
+        console.log('Calling addLeaderboardEntryToAPI with entry:', entry);
         const updatedLeaderboard = await addLeaderboardEntryToAPI(entry);
         console.log('Successfully added to leaderboard:', updatedLeaderboard);
+        console.log('Updated leaderboard length:', updatedLeaderboard.length);
         
         // Update context
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
+        console.log('Context updated with new leaderboard');
         
-        // Save user's score for this meal period to database
-        await saveScoreToAPI(
-          context.netId, 
-          mealPeriod, 
-          context.currentScore,
-          context.dishType || 'plate',
-          context.stableReadings?.[context.stableReadings.length - 1]?.grams || 0
-        );
-        console.log('Successfully saved user score');
+        console.log('✅ Leaderboard entry added successfully');
         
       } catch (error) {
         console.error('Failed to save to database:', error);
@@ -257,18 +364,18 @@ export default function FoodWasteScoreApp() {
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
       }
     } else {
-      console.log('Missing required data - cannot submit to database');
+      console.log('❌ Missing required data - cannot submit to database');
+      console.log('Current score:', context.currentScore, '(type:', typeof context.currentScore, ')');
+      console.log('NetID:', context.netId, '(type:', typeof context.netId, ')');
+      console.log('Score is undefined?', context.currentScore === undefined);
+      console.log('Score is null?', context.currentScore === null);
+      console.log('Score is falsy?', !context.currentScore);
     }
   }, [context.currentScore, context.netId, mealPeriod]);
 
-  // Generate comparison text for score screen
-  const getComparisonText = useCallback(() => {
-    if (!context.netId || !context.currentScore) return '';
-    
-    // For now, use simple comparison since we can't await in useCallback
-    // In a real app, you'd want to load this data when the score is calculated
-    return `Thanks for checking in!`;
-  }, [context.netId, context.currentScore, mealPeriod]);
+  const handleDebugWeightChange = useCallback((weight: number) => {
+    dispatch({ type: 'SET_DEBUG_WEIGHT', weight });
+  }, [dispatch]);
 
   // Render current screen
   const renderScreen = () => {
@@ -283,7 +390,9 @@ export default function FoodWasteScoreApp() {
         return (
           <ScreenScore
             score={context.currentScore || 0}
-            comparisonText={getComparisonText()}
+            previousScore={context.previousScore}
+            netId={context.netId}
+            mealPeriod={mealPeriod}
             onShowLeaderboard={handleShowLeaderboard}
             onExit={handleExit}
             onBack={handleBack}
@@ -294,14 +403,12 @@ export default function FoodWasteScoreApp() {
         return (
           <ScreenLeaderboard
             leaderboard={context.leaderboard}
+            currentScore={context.currentScore || 0}
             onSubmitInitials={handleSubmitInitials}
             onExit={handleExit}
             onBack={handleBack}
           />
         );
-      
-      case 'IDLE_WARNING':
-        return <ScreenIdle countdown={context.idleCountdown} onCancel={handleCancelIdle} />;
       
       case 'ERROR':
         return <ScreenError onExit={handleExit} />;
@@ -318,8 +425,16 @@ export default function FoodWasteScoreApp() {
         mealPeriod={getMealPeriodWithTime(mealPeriod)} 
         idleCountdown={context.idleCountdown}
         leaderboard={context.leaderboard}
+        onDebugWeightChange={handleDebugWeightChange}
       />
       {renderScreen()}
+      
+      {/* Idle warning modal overlay */}
+      {context.showIdleWarning && (
+        <div className="idle-modal-overlay fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center">
+          <ScreenIdle countdown={context.idleCountdown} onCancel={handleCancelIdle} />
+        </div>
+      )}
     </div>
   );
 }

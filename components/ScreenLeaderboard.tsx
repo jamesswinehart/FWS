@@ -3,6 +3,7 @@ import { LeaderboardEntry } from '../lib/supabase';
 
 interface ScreenLeaderboardProps {
   leaderboard: LeaderboardEntry[];
+  currentScore: number;
   onSubmitInitials: (initials: string) => void;
   onExit: () => void;
   onBack: () => void;
@@ -10,6 +11,7 @@ interface ScreenLeaderboardProps {
 
 export default function ScreenLeaderboard({ 
   leaderboard, 
+  currentScore,
   onSubmitInitials, 
   onExit,
   onBack
@@ -31,38 +33,73 @@ export default function ScreenLeaderboard({
     }
   };
 
-  // Generate entries based on actual leaderboard size + 1 for new entry
+  // Generate entries with the new entry inserted in the correct position
   const displayEntries = React.useMemo(() => {
-    const actualEntries = leaderboard.length;
-    const totalSlots = actualEntries + 1; // +1 for the new entry slot
+    if (isSubmitted) {
+      // If already submitted, just show the leaderboard as-is
+      return leaderboard.map((entry, index) => ({ ...entry, rank: index + 1, isPlaceholder: false }));
+    }
     
-    return Array.from({ length: totalSlots }, (_, index) => {
-      const entry = leaderboard[index];
-      const rank = index + 1;
-      
-      if (entry) {
-        return { ...entry, rank, isPlaceholder: false };
-      } else if (rank === totalSlots && !isSubmitted) {
-        // Show input for the last slot (new entry)
-        return { 
-          initials: '', 
-          score: 0, 
-          ts: 0, 
-          rank, 
-          isPlaceholder: false, 
-          isInput: true 
-        };
-      } else {
-        return { 
-          initials: '---', 
-          score: 0, 
-          ts: 0, 
-          rank, 
-          isPlaceholder: true 
-        };
-      }
-    });
-  }, [leaderboard, isSubmitted]);
+    console.log('=== LEADERBOARD DEBUG ===');
+    console.log('Current leaderboard:', leaderboard);
+    console.log('Current score:', currentScore);
+    
+    // Create a temporary entry for the current user
+    const tempEntry = {
+      initials: '',
+      score: currentScore,
+      netid: '',
+      meal_period: '',
+      created_at: new Date().toISOString(),
+      rank: 0,
+      isPlaceholder: false,
+      isInput: true
+    };
+    
+    // Insert the temp entry in the correct position based on score
+    // For ties, earlier submissions get higher rank (chronological order)
+    const sortedEntries = [...leaderboard, tempEntry]
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score; // Higher scores first
+        }
+        // For same scores, earlier submissions (lower timestamp) get higher rank
+        const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return aTime - bTime;
+      })
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+    
+    console.log('Sorted entries:', sortedEntries);
+    
+    return sortedEntries;
+  }, [leaderboard, currentScore, isSubmitted]);
+
+  // Calculate where the new entry will be positioned after submission
+  const getFinalPosition = React.useMemo(() => {
+    if (isSubmitted) return null;
+    
+    // Count how many entries have a higher score than the current user
+    const higherScores = leaderboard.filter(entry => entry.score > currentScore).length;
+    
+    // Count how many entries have the same score but were submitted earlier
+    const sameScoresEarlier = leaderboard.filter(entry => 
+      entry.score === currentScore && 
+      entry.created_at && new Date(entry.created_at).getTime() < new Date().getTime()
+    ).length;
+    
+    // The user's rank will be (higher scores) + (same scores submitted earlier) + 1
+    const finalRank = higherScores + sameScoresEarlier + 1;
+    
+    console.log('=== FINAL POSITION CALCULATION ===');
+    console.log('Current score:', currentScore);
+    console.log('Leaderboard scores:', leaderboard.map(e => e.score));
+    console.log('Higher scores count:', higherScores);
+    console.log('Same scores submitted earlier:', sameScoresEarlier);
+    console.log('Final rank:', finalRank);
+    
+    return finalRank;
+  }, [leaderboard, currentScore, isSubmitted]);
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return 'bg-yellow-500';
@@ -99,10 +136,15 @@ export default function ScreenLeaderboard({
               Be the first to make the leaderboard!
             </p>
           )}
+          {!isSubmitted && getFinalPosition && (
+            <p className="text-lg text-blue-300 mt-2">
+              Your score of {currentScore}% will rank #{getFinalPosition}
+            </p>
+          )}
         </div>
         
-        {/* Leaderboard entries */}
-        <div className="space-y-4 mb-12">
+        {/* Leaderboard entries - scrollable container */}
+        <div className="max-h-96 overflow-y-auto space-y-4 mb-12 pr-4">
           {displayEntries.map((entry, index) => (
             <div key={index} className="flex items-center gap-6">
               {/* Rank circle */}
@@ -111,7 +153,7 @@ export default function ScreenLeaderboard({
               </div>
               
               {/* Initials or input */}
-              {entry.isInput && !isSubmitted ? (
+              {(entry as any).isInput && !isSubmitted ? (
                 <form onSubmit={handleSubmit} className="flex items-center gap-4 flex-1">
                   <input
                     id="initials"
@@ -151,7 +193,7 @@ export default function ScreenLeaderboard({
               )}
               
               {/* Score */}
-              {!entry.isPlaceholder && (
+              {!(entry as any).isPlaceholder && (
                 <span className="text-white text-2xl font-semibold">
                   {entry.score}%
                 </span>

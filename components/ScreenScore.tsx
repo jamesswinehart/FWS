@@ -3,7 +3,9 @@ import CircleGauge from './CircleGauge';
 
 interface ScreenScoreProps {
   score: number;
-  comparisonText: string;
+  previousScore?: number;
+  netId?: string;
+  mealPeriod: string;
   onShowLeaderboard: () => void;
   onExit: () => void;
   onBack: () => void;
@@ -11,11 +13,31 @@ interface ScreenScoreProps {
 
 export default function ScreenScore({ 
   score, 
-  comparisonText, 
+  previousScore,
+  netId,
+  mealPeriod,
   onShowLeaderboard, 
   onExit,
   onBack
 }: ScreenScoreProps) {
+  // Generate comparison text based on previous score
+  const getComparisonText = () => {
+    if (!previousScore) {
+      return "";
+    }
+    
+    const difference = score - previousScore;
+    const mealName = mealPeriod.charAt(0).toUpperCase() + mealPeriod.slice(1);
+    
+    if (difference > 0) {
+      return `This score is ${difference} points higher than your last meal.`;
+    } else if (difference < 0) {
+      return `This score is ${Math.abs(difference)} points lower than your last meal.`;
+    } else {
+      return `This score is the same as your last meal.`;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-dark-slate flex items-center justify-center p-8">
       {/* Back button */}
@@ -36,7 +58,7 @@ export default function ScreenScore({
           </h1>
           
           <p className="text-3xl text-white mb-8 leading-relaxed">
-            {comparisonText}
+            {getComparisonText()}
           </p>
           
           <p className="text-2xl text-white mb-12">
