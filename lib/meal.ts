@@ -20,8 +20,8 @@ export function getCurrentMealPeriod(): MealPeriod {
     return 'lunch';
   }
   
-  // Dinner: 18:30-20:30 (1110-1230 minutes)
-  if (timeInMinutes >= 1110 && timeInMinutes < 1230) {
+  // Dinner: 17:30-20:00 (1050-1200 minutes)
+  if (timeInMinutes >= 1050 && timeInMinutes < 1200) {
     return 'dinner';
   }
   
@@ -74,12 +74,12 @@ export function getNextMealInfo(): {
     // Between breakfast and lunch (10:00-11:30)
     nextMeal = 'lunch';
     nextMealStartMinutes = 690; // 11:30 AM
-  } else if (timeInMinutes < 1110) {
-    // Between lunch and dinner (13:30-18:30)
+  } else if (timeInMinutes < 1050) {
+    // Between lunch and dinner (13:30-17:30)
     nextMeal = 'dinner';
-    nextMealStartMinutes = 1110; // 18:30 (6:30 PM)
+    nextMealStartMinutes = 1050; // 17:30 (5:30 PM)
   } else {
-    // After dinner (20:30+)
+    // After dinner (20:00+)
     nextMeal = 'breakfast';
     nextMealStartMinutes = 480 + 24 * 60; // Next day 8:00 AM
   }
@@ -114,7 +114,7 @@ export function getMealPeriodWithTime(period: MealPeriod): string {
     case 'lunch':
       return 'Lunch (11:30-13:30)';
     case 'dinner':
-      return 'Dinner (18:30-20:30)';
+      return 'Dinner (17:30-20:00)';
     case 'other':
       return 'Other';
     default:
