@@ -3,13 +3,14 @@ import { ScaleReading } from '../transport/transport';
 
 describe('FWS Scoring Functions', () => {
   describe('fws', () => {
-    it('should return 50 for baseline weight', () => {
-      expect(fws(60)).toBe(50);
+    it('should return 100 at or below baseline weight', () => {
+      expect(fws(60)).toBe(100);
+      expect(fws(30)).toBe(100);
     });
 
-    it('should return higher scores for lower weights', () => {
-      expect(fws(30)).toBeGreaterThan(fws(60));
+    it('should decrease as weight increases above baseline', () => {
       expect(fws(60)).toBeGreaterThan(fws(90));
+      expect(fws(90)).toBeGreaterThan(fws(120));
     });
 
     it('should be bounded between 0 and 100', () => {
@@ -18,31 +19,44 @@ describe('FWS Scoring Functions', () => {
     });
 
     it('should handle custom baseline and sensitivity', () => {
-      const score1 = fws(100, 100, 50);
-      const score2 = fws(100, 50, 50);
-      expect(score1).toBeGreaterThan(score2);
+      const scoreAtBaseline = fws(100, 100, 50); // Δ = 0 → 100
+      const scoreAboveBaseline = fws(120, 100, 50); // Δ = 20 < 50
+      expect(scoreAtBaseline).toBe(100);
+      expect(scoreAboveBaseline).toBeLessThan(100);
     });
   });
 
   describe('calculateDishScore', () => {
-    it('should subtract plate tare weight', () => {
-      const score = calculateDishScore(300, 'plate'); // 300g - 200g tare = 100g
-      expect(score).toBe(fws(100));
+    it('should subtract plate tare weight when clearly gross (not net)', () => {
+      // Ensure we are above the 0.6 * tare heuristic so subtraction path is used
+      const gross = 800; // > 0.6 * 711.6 ≈ 426.96
+      const adjusted = Math.max(0, gross - 711.6);
+      const score = calculateDishScore(gross, 'plate');
+      expect(score).toBe(fws(adjusted, 0, 43.3));
     });
 
-    it('should subtract salad bowl tare weight', () => {
-      const score = calculateDishScore(250, 'salad'); // 250g - 150g tare = 100g
-      expect(score).toBe(fws(100));
+    it('should subtract salad bowl tare weight when gross', () => {
+      const tare = 192.8;
+      const gross = 250; // > 0.6 * tare ≈ 115.68
+      const adjusted = Math.max(0, gross - tare);
+      const score = calculateDishScore(gross, 'salad');
+      expect(score).toBe(fws(adjusted, 0, 28.9));
     });
 
-    it('should subtract cereal bowl tare weight', () => {
-      const score = calculateDishScore(200, 'cereal'); // 200g - 100g tare = 100g
-      expect(score).toBe(fws(100));
+    it('should subtract cereal bowl tare weight when gross', () => {
+      const tare = 53.9;
+      const gross = 200; // > 0.6 * tare ≈ 32.34
+      const adjusted = Math.max(0, gross - tare);
+      const score = calculateDishScore(gross, 'cereal');
+      expect(score).toBe(fws(adjusted, 0, 21.6));
     });
 
-    it('should handle negative weights gracefully', () => {
-      const score = calculateDishScore(50, 'plate'); // 50g - 200g tare = -150g
-      expect(score).toBe(fws(0)); // Should be clamped to 0
+    it('should handle zero/negative net weights as perfect score', () => {
+      // Choose gross below tare but still above 0.6*tare to trigger subtraction path
+      const tare = 192.8;
+      const gross = 150; // < tare but > 0.6*tare → adjusted = 0
+      const score = calculateDishScore(gross, 'salad');
+      expect(score).toBe(100);
     });
   });
 
