@@ -129,7 +129,7 @@ export async function getUserScores(netid: string) {
 // Leaderboard functions
 export async function getLeaderboard(limit: number = 10) {
   try {
-    console.log('📊 Supabase: Getting leaderboard with limit:', limit);
+    console.log('Supabase: Getting leaderboard with limit:', limit);
     const { data, error } = await supabase
       .from('leaderboard_entries')
       .select('initials, score, netid, meal_period, created_at')
@@ -138,20 +138,20 @@ export async function getLeaderboard(limit: number = 10) {
       .limit(limit);
 
     if (error) {
-      console.error('❌ Supabase error getting leaderboard:', error);
+      console.error('Supabase error getting leaderboard:', error);
       throw error;
     }
-    console.log('📊 Supabase: Retrieved leaderboard entries:', data);
+    console.log('Supabase: Retrieved leaderboard entries:', data);
     return data || [];
   } catch (error) {
-    console.error('❌ Failed to get leaderboard:', error);
+    console.error('Failed to get leaderboard:', error);
     throw error;
   }
 }
 
 export async function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | 'created_at'>) {
   try {
-    console.log('💾 Supabase: Adding leaderboard entry:', entry);
+    console.log('Supabase: Adding leaderboard entry:', entry);
     const { data, error } = await supabase
       .from('leaderboard_entries')
       .insert([entry])
@@ -159,13 +159,13 @@ export async function addLeaderboardEntry(entry: Omit<LeaderboardEntry, 'id' | '
       .single();
     
     if (error) {
-      console.error('❌ Supabase error:', error);
+      console.error('Supabase error:', error);
       throw error;
     }
-    console.log('✅ Supabase: Successfully added leaderboard entry:', data);
+    console.log('Supabase: Successfully added leaderboard entry:', data);
     return data;
   } catch (error) {
-    console.error('❌ Failed to add leaderboard entry:', error);
+    console.error('Failed to add leaderboard entry:', error);
     throw error;
   }
 }

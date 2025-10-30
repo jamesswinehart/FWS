@@ -85,7 +85,8 @@ export async function addLeaderboardEntryToAPI(newEntry: Omit<LeaderboardEntry, 
 }
 
 export function qualifiesForLeaderboard(score: number): boolean {
-  return score >= 50; // Minimum score to qualify
+  // Allow all scores to be submitted
+  return true;
 }
 
 export function getLeaderboardStats(entries: LeaderboardEntry[]) {

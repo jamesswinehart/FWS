@@ -1,11 +1,11 @@
 # Idle Timer Debug Test
 
 ## Current Status
-- ✅ App is running at http://localhost:3000
-- ✅ Status bar shows "Idle: 40s" 
-- ✅ Debug logging added to dispatch function
-- ✅ Debug logging added to idle timer interval
-- ✅ Debug logging added to state machine
+- App is running at http://localhost:3000
+- Status bar shows "Idle: 40s" 
+- Debug logging added to dispatch function
+- Debug logging added to idle timer interval
+- Debug logging added to state machine
 
 ## How to Test the Idle Timer
 

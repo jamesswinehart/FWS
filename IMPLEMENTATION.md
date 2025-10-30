@@ -1,16 +1,16 @@
 # Food Waste Score - Implementation Summary
 
-## ✅ Project Complete
+## Project Complete
 
 The Food Waste Score kiosk web application has been successfully implemented with all requested features.
 
 ## What's Been Built
 
 ### Core Functionality
-- ✅ Complete state machine flow: Welcome → Dish Type → Score → Leaderboard
-- ✅ Mock scale transport with realistic weight simulation
-- ✅ Food waste scoring algorithm (0-100 scale)
-- ✅ Meal period detection (Breakfast/Lunch/Dinner)
+ - Complete state machine flow: Welcome → Dish Type → Score → Leaderboard
+ - Mock scale transport with realistic weight simulation
+ - Food waste scoring algorithm (0-100 scale)
+ - Meal period detection (Breakfast/Lunch/Dinner)
 - ✅ Score comparison with previous meals
 - ✅ Top 10 leaderboard with localStorage persistence
 - ✅ 40-second inactivity timer with 5-second countdown warning

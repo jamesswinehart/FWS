@@ -138,4 +138,4 @@ Supabase provides built-in:
 
 ---
 
-Built with ❤️ using Supabase for reliable, scalable data storage.
+Built with Supabase for reliable, scalable data storage.

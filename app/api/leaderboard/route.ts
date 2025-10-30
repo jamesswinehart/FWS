@@ -22,12 +22,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '10');
     
-    console.log('📊 GET /api/leaderboard - Fetching entries with limit:', limit);
+    console.log('GET /api/leaderboard - Fetching entries with limit:', limit);
     const entries = await getLeaderboard(limit);
-    console.log('📊 GET /api/leaderboard - Found entries:', entries);
+    console.log('GET /api/leaderboard - Found entries:', entries);
     return NextResponse.json(entries);
   } catch (error) {
-    console.error('❌ API Error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
       { error: 'Failed to get leaderboard' },
       { status: 500 }
@@ -45,14 +45,14 @@ export async function POST(request: NextRequest) {
     const { initials, score, netid, meal_period } = body;
     
     if (!initials || score === undefined) {
-      console.log('❌ Missing required fields - initials:', initials, 'score:', score);
+    console.log('Missing required fields - initials:', initials, 'score:', score);
       return NextResponse.json(
         { error: 'initials and score are required' },
         { status: 400 }
       );
     }
     
-    console.log('✅ Adding leaderboard entry to database...');
+    console.log('Adding leaderboard entry to database...');
     const result = await addLeaderboardEntry({
       initials,
       score,
@@ -60,10 +60,10 @@ export async function POST(request: NextRequest) {
       meal_period: meal_period || null
     });
     
-    console.log('✅ Successfully added leaderboard entry:', result);
+    console.log('Successfully added leaderboard entry:', result);
     return NextResponse.json(result);
   } catch (error) {
-    console.error('❌ API Error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
       { error: 'Failed to add leaderboard entry' },
       { status: 500 }

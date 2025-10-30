@@ -4,17 +4,17 @@ export type DishType = 'plate' | 'salad' | 'cereal';
 
 // Fixed tare weights for different dish types (in grams)
 export const DISH_TARE_WEIGHTS: Record<DishType, number> = {
-  plate: 200,
-  salad: 150,
-  cereal: 100,
+  plate: 711.6,
+  salad: 192.8,
+  cereal: 53.9,
 };
 
 // Baseline weights for different dish types (in grams)
 // These represent typical food waste weight without the FWS interface
 export const DISH_BASELINE_WEIGHTS: Record<DishType, number> = {
-  plate: 60,    // Typical plate waste baseline
-  salad: 40,    // Typical salad waste baseline  
-  cereal: 30,  // Typical cereal waste baseline
+  plate: 0,    // Any waste > 0 reduces score
+  salad: 0,
+  cereal: 0,
 };
 
 // Decay constants for different dish types (in grams)
@@ -59,9 +59,14 @@ export function fws(weightGrams: number, baselineG = 60, decayConstant = 43.3): 
  */
 export function calculateDishScore(weightGrams: number, dishType: DishType, debugWeightOverride?: number): number {
   // Use debug override if provided, otherwise calculate normally
-  const adjustedWeight = debugWeightOverride !== undefined 
-    ? debugWeightOverride 
-    : Math.max(0, weightGrams - DISH_TARE_WEIGHTS[dishType]);
+  // Heuristic: if incoming weight is much smaller than the dish tare, assume the scale was tared with the dish on
+  // and treat weightGrams as net food weight. Otherwise subtract dish tare.
+  const alreadyNet = weightGrams < DISH_TARE_WEIGHTS[dishType] * 0.6;
+  const adjustedWeight = debugWeightOverride !== undefined
+    ? debugWeightOverride
+    : alreadyNet
+      ? Math.max(0, weightGrams)
+      : Math.max(0, weightGrams - DISH_TARE_WEIGHTS[dishType]);
   
   // If no food waste (empty dish), return perfect score
   if (adjustedWeight <= 0) {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useCallback } from 'react';
-import { MockScale } from '../transport/transport.mock';
+import { HIDScale } from '../transport/transport.hid';
 import { ScaleTransport } from '../transport/transport';
 import { 
   AppState, 
@@ -58,7 +58,7 @@ export default function FoodWasteScoreApp() {
     contextRef.current = context;
   }, [context]);
   
-  const [transport] = React.useState<ScaleTransport>(() => new MockScale());
+  const [transport] = React.useState<ScaleTransport>(() => new HIDScale());
   const [mealPeriod] = React.useState(() => getCurrentMealPeriod());
 
   // Dispatch function for state machine
@@ -78,7 +78,7 @@ export default function FoodWasteScoreApp() {
     } else {
       // Log idle tick every 5 seconds to reduce spam
       if (contextRef.current.idleCountdown % 5 === 0) {
-        console.log('⏰ Idle tick:', contextRef.current.idleCountdown, 'seconds remaining, showIdleWarning:', contextRef.current.showIdleWarning);
+        console.log('Idle tick:', contextRef.current.idleCountdown, 'seconds remaining, showIdleWarning:', contextRef.current.showIdleWarning);
       }
     }
     
@@ -124,11 +124,7 @@ export default function FoodWasteScoreApp() {
 
     transport.onReading(handleReading);
     
-    // Connect transport on mount
-    transport.connect().catch((error) => {
-      dispatch({ type: 'ERROR_OCCURRED', error: error.message });
-    });
-
+    // Do not auto-connect; WebHID requires a user gesture. Use the UI button to connect.
     return () => {
       transport.disconnect();
     };
@@ -189,15 +185,15 @@ export default function FoodWasteScoreApp() {
     };
     
     (window as any).checkLeaderboard = async () => {
-      console.log('🔍 Checking current leaderboard...');
+      console.log('Checking current leaderboard...');
       try {
         const response = await fetch('/api/leaderboard?limit=50');
         const entries = await response.json();
-        console.log('🔍 Current leaderboard entries:', entries);
-        console.log('🔍 Total entries:', entries.length);
-        console.log('🔍 Scores:', entries.map((e: any) => `${e.initials}: ${e.score}%`));
+        console.log('Current leaderboard entries:', entries);
+        console.log('Total entries:', entries.length);
+        console.log('Scores:', entries.map((e: any) => `${e.initials}: ${e.score}%`));
       } catch (error) {
-        console.error('🔍 Failed to check leaderboard:', error);
+        console.error('Failed to check leaderboard:', error);
       }
     };
     
@@ -246,14 +242,14 @@ export default function FoodWasteScoreApp() {
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
-        console.log('🔄 Loading leaderboard on mount...');
+        console.log('Loading leaderboard on mount...');
         // Temporarily increase limit to see all entries
         const entries = await loadLeaderboardFromAPI();
-        console.log('📊 Loaded leaderboard entries:', entries);
-        console.log('📊 Total entries found:', entries.length);
+        console.log('Loaded leaderboard entries:', entries);
+        console.log('Total entries found:', entries.length);
         dispatch({ type: 'SET_LEADERBOARD', payload: entries });
       } catch (error) {
-        console.error('❌ Failed to load leaderboard:', error);
+        console.error('Failed to load leaderboard:', error);
       }
     };
     loadLeaderboard();
@@ -265,19 +261,19 @@ export default function FoodWasteScoreApp() {
     
     // Fetch previous score for comparison
     try {
-      console.log('🔍 Fetching previous score for NetID:', netId);
+      console.log('Fetching previous score for NetID:', netId);
       const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
       if (response.ok) {
         const data = await response.json();
         const previousScore = data?.score || null;
-        console.log('🔍 Previous score found:', previousScore);
+        console.log('Previous score found:', previousScore);
         dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
       } else {
-        console.log('🔍 No previous score found for NetID:', netId);
+        console.log('No previous score found for NetID:', netId);
         dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
       }
     } catch (error) {
-      console.error('❌ Failed to fetch previous score:', error);
+      console.error('Failed to fetch previous score:', error);
       dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
     }
   }, [dispatch, mealPeriod]);
@@ -320,10 +316,10 @@ export default function FoodWasteScoreApp() {
       // Check if score qualifies for leaderboard (minimum 50 points)
       console.log('Checking qualification for score:', context.currentScore);
       if (!qualifiesForLeaderboard(context.currentScore)) {
-        console.log('❌ Score too low for leaderboard:', context.currentScore, '(minimum 50 required)');
+        console.log('Score does not qualify for leaderboard:', context.currentScore);
         return;
       }
-      console.log('✅ Score qualifies for leaderboard:', context.currentScore);
+      console.log('Score qualifies for leaderboard:', context.currentScore);
       
       const entry: Omit<LeaderboardEntry, 'id' | 'created_at'> = {
         initials: initials.toUpperCase().slice(0, 3), // Ensure 3 chars max, uppercase
@@ -353,7 +349,7 @@ export default function FoodWasteScoreApp() {
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
         console.log('Context updated with new leaderboard');
         
-        console.log('✅ Leaderboard entry added successfully');
+        console.log('Leaderboard entry added successfully');
         
       } catch (error) {
         console.error('Failed to save to database:', error);
@@ -364,7 +360,7 @@ export default function FoodWasteScoreApp() {
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
       }
     } else {
-      console.log('❌ Missing required data - cannot submit to database');
+      console.log('Missing required data - cannot submit to database');
       console.log('Current score:', context.currentScore, '(type:', typeof context.currentScore, ')');
       console.log('NetID:', context.netId, '(type:', typeof context.netId, ')');
       console.log('Score is undefined?', context.currentScore === undefined);
@@ -425,6 +421,8 @@ export default function FoodWasteScoreApp() {
         mealPeriod={getMealPeriodWithTime(mealPeriod)} 
         idleCountdown={context.idleCountdown}
         leaderboard={context.leaderboard}
+        currentWeight={context.readings[context.readings.length - 1]?.grams || 0}
+        isStable={context.readings[context.readings.length - 1]?.stable || false}
         onDebugWeightChange={handleDebugWeightChange}
       />
       {renderScreen()}

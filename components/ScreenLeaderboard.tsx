@@ -18,18 +18,25 @@ export default function ScreenLeaderboard({
 }: ScreenLeaderboardProps) {
   const [initials, setInitials] = React.useState('');
   const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [lastSubmittedInitials, setLastSubmittedInitials] = React.useState<string>('');
+  const listRef = React.useRef<HTMLDivElement | null>(null);
+  const itemRefs = React.useRef<(HTMLDivElement | null)[]>([]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (initials.trim().length === 3) {
-      onSubmitInitials(initials.trim().toUpperCase());
+    if (isSubmitting || isSubmitted) return;
+    const value = initials.trim().toUpperCase();
+    if (value.length !== 3) return;
+    try {
+      setIsSubmitting(true);
+      await onSubmitInitials(value);
       setIsSubmitted(true);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit(e);
+      setLastSubmittedInitials(value);
+    } catch (err) {
+      console.error('Submit initials failed:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -74,6 +81,18 @@ export default function ScreenLeaderboard({
     
     return sortedEntries;
   }, [leaderboard, currentScore, isSubmitted]);
+
+  // After submission, scroll the list so the user's entry is centered
+  React.useEffect(() => {
+    if (!isSubmitted) return;
+    if (!displayEntries || displayEntries.length === 0) return;
+
+    // Find the submitted entry by matching initials and score
+    const targetIndex = displayEntries.findIndex((e: any) => !e.isInput && e.initials === lastSubmittedInitials && e.score === currentScore);
+    if (targetIndex >= 0 && itemRefs.current[targetIndex]) {
+      itemRefs.current[targetIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isSubmitted, displayEntries, lastSubmittedInitials, currentScore]);
 
   // Calculate where the new entry will be positioned after submission
   const getFinalPosition = React.useMemo(() => {
@@ -144,9 +163,9 @@ export default function ScreenLeaderboard({
         </div>
         
         {/* Leaderboard entries - scrollable container */}
-        <div className="max-h-96 overflow-y-auto space-y-4 mb-12 pr-4">
+        <div ref={listRef} className="max-h-96 overflow-y-auto space-y-4 mb-12 pr-4">
           {displayEntries.map((entry, index) => (
-            <div key={index} className="flex items-center gap-6">
+            <div ref={(el) => { itemRefs.current[index] = el; }} key={index} className="flex items-center gap-6">
               {/* Rank circle */}
               <div className={`w-16 h-16 rounded-full ${getRankColor(entry.rank)} flex items-center justify-center`}>
                 <span className="text-white font-bold text-xl">{entry.rank}</span>
@@ -161,14 +180,15 @@ export default function ScreenLeaderboard({
                     type="text"
                     value={initials}
                     onChange={(e) => setInitials(e.target.value.toUpperCase().slice(0, 3))}
-                    onKeyPress={handleKeyPress}
                     placeholder="TYPE YOUR THREE INITIALS HERE..."
                     className="px-6 py-4 text-xl bg-white text-gray-900 rounded-lg flex-1 focus:outline-none focus:ring-4 focus:ring-blue-500"
+                    disabled={isSubmitting}
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="w-16 h-16 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors"
+                    disabled={isSubmitting}
+                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isSubmitting ? 'bg-gray-400' : 'bg-white hover:bg-gray-100'}`}
                     aria-label="Submit initials"
                   >
                     <svg

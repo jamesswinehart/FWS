@@ -1,4 +1,4 @@
-# Idle Timer Fix Applied ✅
+# Idle Timer Fix Applied
 
 ## What Was Wrong
 The idle timer wasn't counting down because the `useEffect` had `context.idleCountdown` and `state` as dependencies, which caused the interval to restart every time the countdown changed, preventing it from actually counting down.
