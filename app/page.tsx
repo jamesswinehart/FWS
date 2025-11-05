@@ -33,6 +33,7 @@ import ScreenWelcome from '../components/ScreenWelcome';
 import ScreenDishType from '../components/ScreenDishType';
 import ScreenScore from '../components/ScreenScore';
 import ScreenLeaderboard from '../components/ScreenLeaderboard';
+import ScreenThankYou from '../components/ScreenThankYou';
 import ScreenIdle from '../components/ScreenIdle';
 import ScreenError from '../components/ScreenError';
 import StatusBar from '../components/StatusBar';
@@ -45,6 +46,7 @@ export default function FoodWasteScoreApp() {
   }));
   const [debugWeightOverride, setDebugWeightOverride] = React.useState<number | null>(null);
   const [showConnectHelp, setShowConnectHelp] = React.useState(false);
+  const [showReloadPrompt, setShowReloadPrompt] = React.useState(false);
   
   // Use refs to avoid dependency issues
   const stateRef = React.useRef(state);
@@ -109,7 +111,25 @@ export default function FoodWasteScoreApp() {
           console.error('Failed to save score to database:', error);
         });
     }
-  }, []);
+    
+    // Handle baseline data save action (score = 0 for baseline data)
+    const saveBaselineAction = result.actions.find(a => a.type === 'SAVE_BASELINE_DATA');
+    if (saveBaselineAction && saveBaselineAction.type === 'SAVE_BASELINE_DATA') {
+      console.log('=== SAVING BASELINE DATA TO DATABASE ===');
+      console.log('NetID:', saveBaselineAction.netId);
+      console.log('Dish Type:', saveBaselineAction.dishType);
+      console.log('Weight:', saveBaselineAction.weightGrams, 'grams');
+      
+      // Save baseline data with score = 0
+      saveScoreToAPI(saveBaselineAction.netId, mealPeriod, 0, saveBaselineAction.dishType, saveBaselineAction.weightGrams)
+        .then(() => {
+          console.log('Baseline data saved to database successfully');
+        })
+        .catch((error) => {
+          console.error('Failed to save baseline data to database:', error);
+        });
+    }
+  }, [mealPeriod]);
 
   // Handle scale readings
   useEffect(() => {
@@ -141,6 +161,23 @@ export default function FoodWasteScoreApp() {
       clearInterval(interval);
     };
   }, [dispatch]);
+
+  // Auto-exit baseline flow after thank-you (5 seconds)
+  useEffect(() => {
+    if (state === 'THANK_YOU') {
+      const t = setTimeout(() => dispatch({ type: 'EXIT' }), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [state, dispatch]);
+
+  // Periodic reload prompt every 2 minutes 30 seconds
+  useEffect(() => {
+    // Start/restart the timer only when the prompt is hidden
+    if (!showReloadPrompt) {
+      const t = setTimeout(() => setShowReloadPrompt(true), 2.5 * 60 * 1000);
+      return () => clearTimeout(t);
+    }
+  }, [showReloadPrompt]);
 
   // Test idle timer functionality
   useEffect(() => {
@@ -280,25 +317,25 @@ export default function FoodWasteScoreApp() {
 
       // Dispatch validation result
       dispatch({ type: 'NETID_VALIDATED', netId: netId.trim(), isValid });
-
+    
       // Only proceed if NetID is valid
       if (isValid) {
-        // Fetch previous score for comparison
-        try {
-          console.log('Fetching previous score for NetID:', netId);
-          const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
-          if (response.ok) {
-            const data = await response.json();
-            const previousScore = data?.score || null;
-            console.log('Previous score found:', previousScore);
-            dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
-          } else {
-            console.log('No previous score found for NetID:', netId);
-            dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
-          }
-        } catch (error) {
-          console.error('Failed to fetch previous score:', error);
-          dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+    // Fetch previous score for comparison
+    try {
+      console.log('Fetching previous score for NetID:', netId);
+      const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
+      if (response.ok) {
+        const data = await response.json();
+        const previousScore = data?.score || null;
+        console.log('Previous score found:', previousScore);
+        dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
+      } else {
+        console.log('No previous score found for NetID:', netId);
+        dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+      }
+    } catch (error) {
+      console.error('Failed to fetch previous score:', error);
+      dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
         }
       }
     } catch (error) {
@@ -425,6 +462,11 @@ export default function FoodWasteScoreApp() {
       case 'DISH_TYPE':
         return <ScreenDishType onSelectDish={handleSelectDish} onBack={handleBack} />;
       
+      case 'THANK_YOU':
+        return (
+          <ScreenThankYou onExit={handleExit} />
+        );
+      
       case 'SCORE':
         return (
           <ScreenScore
@@ -471,7 +513,7 @@ export default function FoodWasteScoreApp() {
         onDebugWeightChange={handleDebugWeightChange}
       />
       <div className={isConnected ? '' : 'filter blur-sm pointer-events-none select-none'}>
-        {renderScreen()}
+      {renderScreen()}
       </div>
       {!isConnected && (
         <div className="fixed inset-0 z-40 flex items-center justify-center">
@@ -520,6 +562,25 @@ export default function FoodWasteScoreApp() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Reload reminder overlay (shows when connected) */}
+      {isConnected && showReloadPrompt && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black bg-opacity-60" />
+          <div className="relative z-50 text-center p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl border border-gray-700 max-w-xl">
+            <h2 className="text-3xl font-bold text-white mb-4">Please reload the page</h2>
+            <p className="text-gray-300 mb-6">For best performance, reload this kiosk page periodically.</p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors"
+              >
+                Reload Now
+              </button>
+            </div>
+          </div>
         </div>
       )}
       
