@@ -44,6 +44,7 @@ export default function FoodWasteScoreApp() {
     leaderboard: [],
   }));
   const [debugWeightOverride, setDebugWeightOverride] = React.useState<number | null>(null);
+  const [showConnectHelp, setShowConnectHelp] = React.useState(false);
   
   // Use refs to avoid dependency issues
   const stateRef = React.useRef(state);
@@ -410,7 +411,16 @@ export default function FoodWasteScoreApp() {
   const renderScreen = () => {
     switch (state) {
       case 'WELCOME':
-        return <ScreenWelcome onSubmitNetId={handleSubmitNetId} />;
+        // Consider weight ready only if readings are stable AND latest stable reading is > 0g
+        // Use rolling stability gate and the latest reading's grams to avoid relying on device 'stable' flag
+        const latestReading = context.readings?.[context.readings.length - 1];
+        const hasStableNonzero = gateStable(context.readings) && (latestReading?.grams || 0) > 0;
+        return (
+          <ScreenWelcome 
+            onSubmitNetId={handleSubmitNetId}
+            isWeightStable={hasStableNonzero}
+          />
+        );
       
       case 'DISH_TYPE':
         return <ScreenDishType onSelectDish={handleSelectDish} onBack={handleBack} />;
@@ -447,6 +457,8 @@ export default function FoodWasteScoreApp() {
     }
   };
 
+  const isConnected = transport.isConnected();
+
   return (
     <div className="relative">
       <StatusBar 
@@ -458,7 +470,58 @@ export default function FoodWasteScoreApp() {
         isStable={context.readings[context.readings.length - 1]?.stable || false}
         onDebugWeightChange={handleDebugWeightChange}
       />
-      {renderScreen()}
+      <div className={isConnected ? '' : 'filter blur-sm pointer-events-none select-none'}>
+        {renderScreen()}
+      </div>
+      {!isConnected && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black bg-opacity-60" />
+          {/* Center modal (hidden on md+ once help shows) */}
+          {showConnectHelp ? (
+            <div className="relative z-50 text-center p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl border border-gray-700 md:hidden">
+              <h2 className="text-3xl font-bold text-white mb-4">Connect the scale to continue</h2>
+              <p className="text-gray-300 mb-6">Make sure your USB scale is plugged in and permitted by the browser.</p>
+              <button
+                onClick={() => {
+                  setShowConnectHelp(true);
+                  transport.connect().catch(console.error);
+                }}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors animate-pulse"
+              >
+                Connect Scale
+              </button>
+            </div>
+          ) : (
+            <div className="relative z-50 text-center p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl border border-gray-700">
+              <h2 className="text-3xl font-bold text-white mb-4">Connect the scale to continue</h2>
+              <p className="text-gray-300 mb-6">Make sure your USB scale is plugged in and permitted by the browser.</p>
+              <button
+                onClick={() => {
+                  setShowConnectHelp(true);
+                  transport.connect().catch(console.error);
+                }}
+                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors animate-pulse"
+              >
+                Connect Scale
+              </button>
+            </div>
+          )}
+          {/* Instruction helper panel (only after user clicks connect) */}
+          {showConnectHelp && (
+            <div className="hidden md:block absolute top-20 left-[28rem] lg:left-[34rem] xl:left-[40rem] z-50">
+              <div className="bg-gray-900/95 text-white rounded-lg shadow-xl border border-gray-700 max-w-xl">
+                <div className="px-5 py-4 text-left">
+                  <ul className="list-disc list-inside space-y-2 text-sm md:text-base">
+                    <li className="whitespace-nowrap">Make sure the scale is turned on</li>
+                    <li className="whitespace-nowrap">Click on “M10 10 lb Digital Postal Scale”</li>
+                    <li className="whitespace-nowrap">Click “Connect” in the browser popup</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Idle warning modal overlay */}
       {context.showIdleWarning && (

@@ -56,94 +56,15 @@ export default function StatusBar({ transport, mealPeriod, idleCountdown, leader
     <div className="absolute top-4 left-4 z-50">
       <div className="bg-gray-800 bg-opacity-90 rounded-lg p-3 text-sm text-white">
         <div className="flex items-center gap-4">
-          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-            transport.isConnected() ? 'bg-green-600' : 'bg-red-600'
-          }`}>
-            {transport.isConnected() ? 'Connected' : 'Disconnected'}
-          </span>
-          <span className="text-gray-300">
-            Meal: {mealPeriod}
-          </span>
-          <span className="text-gray-300">
-            Tare: {transport.getOffset().toFixed(1)}g
-          </span>
-          <span className={`px-2 py-1 rounded text-xs font-semibold ${
-            idleCountdown && idleCountdown <= 10 ? 'bg-red-600' : 
-            idleCountdown && idleCountdown <= 20 ? 'bg-yellow-600' : 'bg-blue-600'
-          }`}>
-            Idle: {idleCountdown}s
-          </span>
           <span className="text-gray-300">
             Weight: {currentWeight.toFixed(1)}g {isStable ? '(stable)' : ''}
           </span>
-          {!transport.isConnected() && (
-            <button
-              onClick={() => transport.connect().catch(console.error)}
-              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-colors"
-            >
-              Connect Scale
-            </button>
-          )}
           {transport.isConnected() && (
-            <button
-              onClick={() => {
-                try { transport.tare(); } catch (e) { console.error(e); }
-              }}
-              className="px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs transition-colors"
-            >
-              Tare
-            </button>
+            <span className="px-2 py-1 bg-green-600 rounded text-xs font-semibold">
+              Scale Connected
+            </span>
           )}
         </div>
-        
-        {showDebug && (
-          <div className="mt-2 pt-2 border-t border-gray-600">
-            <div className="text-xs text-gray-300 mb-2">
-              Idle: {idleCountdown}s
-            </div>
-            <div className="text-xs text-gray-300 mb-2">
-              Debug: Timer should count down every second
-            </div>
-            
-            {/* Leaderboard Stats */}
-            <div className="text-xs text-gray-300 mb-2">
-              <div>Leaderboard Stats:</div>
-              <div>Entries: {getLeaderboardStats(leaderboard).totalEntries}</div>
-              <div>Avg Score: {getLeaderboardStats(leaderboard).averageScore}%</div>
-              <div>High Score: {getLeaderboardStats(leaderboard).highestScore}%</div>
-            </div>
-            
-            <button
-              onClick={handleReconnect}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs transition-colors mr-2"
-            >
-              Reconnect Scale
-            </button>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('testIdle'))}
-              className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded text-xs transition-colors"
-            >
-              Test Idle
-            </button>
-            <button
-              onClick={() => {
-                // Force idle countdown to 0
-                window.dispatchEvent(new CustomEvent('forceIdle'));
-              }}
-              className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs transition-colors mr-2"
-            >
-              Force Idle
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-xs transition-colors"
-            >
-              Logout
-            </button>
-            
-            {/* Simplified: removed debug weight, calibration, and unit format controls */}
-          </div>
-        )}
       </div>
     </div>
   );
