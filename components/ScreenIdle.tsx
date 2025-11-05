@@ -13,10 +13,10 @@ export default function ScreenIdle({ countdown, onCancel }: ScreenIdleProps) {
 
   return (
     <div 
-      className="cursor-pointer max-w-md mx-auto relative"
+      className="w-full h-full cursor-pointer flex items-center justify-center"
       onClick={handleClick}
     >
-      <div className="relative z-10 text-center">
+      <div className="relative z-10 text-center max-w-md">
         <h1 className="text-5xl font-bold text-white mb-6">
           Still there?
         </h1>

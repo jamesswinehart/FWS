@@ -67,6 +67,29 @@ export async function initializeDatabase() {
   }
 }
 
+// NetID validation function
+export async function isNetIdAllowed(netid: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('allowed_netids')
+      .select('netid')
+      .eq('netid', netid.toLowerCase().trim())
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned (expected if NetID not found)
+      console.error('Error checking allowed NetID:', error);
+      return false;
+    }
+    
+    // If data exists, NetID is allowed
+    return !!data;
+  } catch (error) {
+    console.error('Failed to check allowed NetID:', error);
+    return false;
+  }
+}
+
 // User scores functions
 export async function saveUserScore(score: Omit<UserScore, 'id' | 'created_at'>) {
   try {

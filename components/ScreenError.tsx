@@ -1,10 +1,11 @@
 import React from 'react';
 
 interface ScreenErrorProps {
+  errorMessage?: string;
   onExit: () => void;
 }
 
-export default function ScreenError({ onExit }: ScreenErrorProps) {
+export default function ScreenError({ errorMessage, onExit }: ScreenErrorProps) {
   return (
     <div className="min-h-screen bg-dark-slate flex items-center justify-center p-8">
       {/* Large circular ring background */}
@@ -12,12 +13,12 @@ export default function ScreenError({ onExit }: ScreenErrorProps) {
         <div className="w-96 h-96 border-8 border-slate-700 rounded-full opacity-50"></div>
       </div>
       
-      <div className="relative z-10 text-center">
+      <div className="relative z-10 text-center max-w-2xl">
         <h1 className="text-6xl font-bold text-white mb-8">
-          Something went wrong
+          {errorMessage ? 'Access Denied' : 'Something went wrong'}
         </h1>
         <p className="text-4xl text-white mb-12">
-          Please try again.
+          {errorMessage || 'Please try again.'}
         </p>
         <button
           onClick={onExit}

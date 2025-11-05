@@ -13,6 +13,7 @@ export type AppState =
 
 export type AppEvent = 
   | { type: 'SUBMIT_NETID'; netId: string }
+  | { type: 'NETID_VALIDATED'; netId: string; isValid: boolean }
   | { type: 'SELECT_DISH'; dishType: DishType }
   | { type: 'READING_UPDATE'; reading: ScaleReading }
   | { type: 'SHOW_LEADERBOARD' }
@@ -80,11 +81,15 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
 
   switch (state) {
     case 'WELCOME':
-      if (event.type === 'SUBMIT_NETID') {
-        newState = 'DISH_TYPE';
-        actions.push({ type: 'SET_NETID', netId: event.netId });
-        // Don't reset session - we want to keep the NetID!
-        // FIXED: Removed RESET_SESSION that was clearing NetID
+      if (event.type === 'NETID_VALIDATED') {
+        if (event.isValid) {
+          newState = 'DISH_TYPE';
+          actions.push({ type: 'SET_NETID', netId: event.netId });
+        } else {
+          // Invalid NetID - show error and stay on welcome screen
+          actions.push({ type: 'SET_ERROR', error: `NetID "${event.netId}" is not authorized. Please contact an administrator.` });
+          newState = 'ERROR';
+        }
       }
       break;
 
@@ -127,6 +132,12 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
       } else if (event.type === 'BACK') {
         newState = 'DISH_TYPE';
         actions.push({ type: 'CLEAR_DISH_DATA' });
+      }
+      // Update score when new readings come in (especially if stable)
+      if (event.type === 'READING_UPDATE' && context.dishType) {
+        // Use the new reading from the event (it will be added to context by the global handler)
+        const newScore = calculateDishScore(event.reading.grams, context.dishType, context.debugWeightOverride);
+        actions.push({ type: 'SET_SCORE', score: newScore });
       }
       break;
 

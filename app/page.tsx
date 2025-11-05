@@ -257,24 +257,57 @@ export default function FoodWasteScoreApp() {
 
   // Event handlers
   const handleSubmitNetId = useCallback(async (netId: string) => {
-    dispatch({ type: 'SUBMIT_NETID', netId });
-    
-    // Fetch previous score for comparison
+    // First validate the NetID
     try {
-      console.log('Fetching previous score for NetID:', netId);
-      const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
-      if (response.ok) {
-        const data = await response.json();
-        const previousScore = data?.score || null;
-        console.log('Previous score found:', previousScore);
-        dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
-      } else {
-        console.log('No previous score found for NetID:', netId);
-        dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+      console.log('Validating NetID:', netId);
+      const validateResponse = await fetch('/api/auth/validate-netid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ netid: netId }),
+      });
+
+      if (!validateResponse.ok) {
+        throw new Error('Failed to validate NetID');
+      }
+
+      const validateData = await validateResponse.json();
+      const isValid = validateData.allowed;
+
+      console.log('NetID validation result:', isValid);
+
+      // Dispatch validation result
+      dispatch({ type: 'NETID_VALIDATED', netId: netId.trim(), isValid });
+
+      // Only proceed if NetID is valid
+      if (isValid) {
+        // Fetch previous score for comparison
+        try {
+          console.log('Fetching previous score for NetID:', netId);
+          const response = await fetch(`/api/scores?netid=${netId}&meal_period=${mealPeriod}`);
+          if (response.ok) {
+            const data = await response.json();
+            const previousScore = data?.score || null;
+            console.log('Previous score found:', previousScore);
+            dispatch({ type: 'SET_PREVIOUS_SCORE', score: previousScore });
+          } else {
+            console.log('No previous score found for NetID:', netId);
+            dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+          }
+        } catch (error) {
+          console.error('Failed to fetch previous score:', error);
+          dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch previous score:', error);
-      dispatch({ type: 'SET_PREVIOUS_SCORE', score: null });
+      console.error('Failed to validate NetID:', error);
+      // On error, show error message
+      dispatch({ 
+        type: 'NETID_VALIDATED', 
+        netId: netId.trim(), 
+        isValid: false 
+      });
     }
   }, [dispatch, mealPeriod]);
 
@@ -407,7 +440,7 @@ export default function FoodWasteScoreApp() {
         );
       
       case 'ERROR':
-        return <ScreenError onExit={handleExit} />;
+        return <ScreenError errorMessage={context.errorMessage} onExit={handleExit} />;
       
       default:
         return <ScreenWelcome onSubmitNetId={handleSubmitNetId} />;
