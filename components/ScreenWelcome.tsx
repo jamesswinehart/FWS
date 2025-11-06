@@ -35,10 +35,10 @@ export default function ScreenWelcome({ onSubmitNetId, isWeightStable = false }:
         </h1>
         
         {/* Step-by-step instructions */}
-        <div className="text-2xl mb-12 leading-relaxed text-left max-w-3xl mx-auto">
+        <div className="text-2xl mb-8 leading-relaxed text-left max-w-3xl mx-auto">
           <div className={`mb-3 transition-colors ${!isWeightStable ? 'text-white font-semibold' : 'text-gray-400'}`}>
             <span className={`inline-block w-3 h-3 mr-3 rounded-full ${!isWeightStable ? 'bg-blue-400 animate-pulse' : 'bg-gray-500'}`}></span>
-            Set your dish on the scale
+            Set your dish on the scale (no silverware, no napkins, one dish at a time)
           </div>
           <div className={`transition-colors ${isWeightStable ? 'text-white font-semibold' : 'text-gray-500'}`}>
             <span className={`inline-block w-3 h-3 mr-3 rounded-full ${isWeightStable ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`}></span>

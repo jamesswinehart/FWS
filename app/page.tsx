@@ -557,6 +557,7 @@ export default function FoodWasteScoreApp() {
                     <li className="whitespace-nowrap">Make sure the scale is turned on</li>
                     <li className="whitespace-nowrap">Click on “M10 10 lb Digital Postal Scale”</li>
                     <li className="whitespace-nowrap">Click “Connect” in the browser popup</li>
+                    <li className="whitespace-nowrap">If the browser popup disppears, try refreshing the page</li>
                   </ul>
                 </div>
               </div>
