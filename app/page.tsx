@@ -162,13 +162,6 @@ export default function FoodWasteScoreApp() {
     };
   }, [dispatch]);
 
-  // Auto-exit baseline flow after thank-you (5 seconds)
-  useEffect(() => {
-    if (state === 'THANK_YOU') {
-      const t = setTimeout(() => dispatch({ type: 'EXIT' }), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [state, dispatch]);
 
   // Periodic reload prompt every 2 minutes 30 seconds
   useEffect(() => {

@@ -4,7 +4,7 @@ export type DishType = 'plate' | 'salad' | 'cereal';
 
 // Fixed tare weights for different dish types (in grams)
 export const DISH_TARE_WEIGHTS: Record<DishType, number> = {
-  plate: 711.6,
+  plate: 760.6,
   salad: 192.8,
   cereal: 53.9,
 };
@@ -12,18 +12,18 @@ export const DISH_TARE_WEIGHTS: Record<DishType, number> = {
 // Baseline weights for different dish types (in grams)
 // These represent typical food waste weight without the FWS interface
 export const DISH_BASELINE_WEIGHTS: Record<DishType, number> = {
-  plate: 0,
-  salad: 0,
-  cereal: 0,
+  plate: 26.0,
+  salad: 14.4,
+  cereal: 2.8,
 };
 
 // Decay constants for different dish types (in grams)
 // These control how fast the score falls for waste above baseline
 // Using τ = h / ln(2) where h is half-life in grams
 export const DISH_DECAY_CONSTANTS: Record<DishType, number> = {
-  plate: 43.3,  // ~30g half-life (30 / ln(2) ≈ 43.3)
-  salad: 28.9,  // ~20g half-life (20 / ln(2) ≈ 28.9)
-  cereal: 21.6, // ~15g half-life (15 / ln(2) ≈ 21.6)
+  plate: 76.6,  //
+  salad: 57.7,  // 
+  cereal: 43.3, //
 };
 
 /**

@@ -97,17 +97,14 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
 
     case 'DISH_TYPE':
       if (event.type === 'SELECT_DISH') {
-        newState = 'THANK_YOU';
+        newState = 'SCORE';
         actions.push({ type: 'SET_DISH_TYPE', dishType: event.dishType });
-        // Save baseline data (netid, dishType, weightGrams) without score
-        if (context.netId && context.readings.length > 0) {
+        // Calculate score using the latest reading
+        if (context.readings.length > 0) {
           const latestReading = context.readings[context.readings.length - 1];
-          actions.push({ 
-            type: 'SAVE_BASELINE_DATA', 
-            netId: context.netId, 
-            dishType: event.dishType, 
-            weightGrams: latestReading?.grams || 0 
-          });
+          const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
+          actions.push({ type: 'SET_SCORE', score });
+          // Don't save here - wait until user exits to save the actual score
         }
       } else if (event.type === 'BACK') {
         newState = 'WELCOME';
@@ -128,6 +125,18 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         // Don't save score when going to leaderboard - wait for exit
       } else if (event.type === 'EXIT') {
         newState = 'WELCOME';
+        // Save score when user exits
+        if (context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
         actions.push({ type: 'RESET_SESSION' });
       } else if (event.type === 'BACK') {
         newState = 'DISH_TYPE';
@@ -144,6 +153,18 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     case 'LEADERBOARD':
       if (event.type === 'EXIT') {
         newState = 'WELCOME';
+        // Save score when user exits leaderboard
+        if (context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
         actions.push({ type: 'RESET_SESSION' });
       } else if (event.type === 'BACK') {
         newState = 'SCORE';
@@ -179,6 +200,18 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
     } else if (context.showIdleWarning) {
       // Handle countdown when warning is already showing
       if (context.idleCountdown <= 1) {
+        // Save score before resetting if we're in SCORE or LEADERBOARD state
+        if ((state === 'SCORE' || state === 'LEADERBOARD') && context.netId && context.dishType && context.currentScore !== undefined && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          actions.push({ 
+            type: 'SAVE_SCORE_TO_DB', 
+            netId: context.netId, 
+            dishType: context.dishType, 
+            score: context.currentScore, 
+            weightGrams: latestReading?.grams || 0 
+          });
+          actions.push({ type: 'SET_SCORE_SAVED', saved: true });
+        }
         newState = 'WELCOME';
         actions.push({ type: 'RESET_SESSION' });
         actions.push({ type: 'HIDE_IDLE_WARNING' });
