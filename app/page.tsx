@@ -163,6 +163,14 @@ export default function FoodWasteScoreApp() {
   }, [dispatch]);
 
 
+  // Auto-exit control group after thank-you (5 seconds)
+  useEffect(() => {
+    if (state === 'THANK_YOU' && context.treatmentGroup === 'control') {
+      const t = setTimeout(() => dispatch({ type: 'EXIT' }), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [state, context.treatmentGroup, dispatch]);
+
   // Periodic reload prompt every 2 minutes 30 seconds
   useEffect(() => {
     // Start/restart the timer only when the prompt is hidden

@@ -35,6 +35,7 @@ export interface AppContext {
   previousScore?: number; // Store user's previous score for comparison
   readings: ScaleReading[];
   stableReadings: ScaleReading[];
+  treatmentGroup?: 'treatment' | 'control'; // A/B testing group assignment
   
   // UI state
   idleCountdown: number;
@@ -69,6 +70,7 @@ export type AppAction =
   | { type: 'SET_PREVIOUS_STATE'; state: AppState }
   | { type: 'SHOW_IDLE_WARNING' }
   | { type: 'HIDE_IDLE_WARNING' }
+  | { type: 'SET_TREATMENT_GROUP'; group: 'treatment' | 'control' }
   | { type: 'UPDATE_LEADERBOARD'; entry: LeaderboardEntry }
   | { type: 'SET_LEADERBOARD_DATA'; entries: any[] };
 
@@ -87,6 +89,10 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         if (event.isValid) {
         newState = 'DISH_TYPE';
         actions.push({ type: 'SET_NETID', netId: event.netId });
+        // Randomly assign to treatment (score/leaderboard) or control (thank you/exit) group
+        // 50/50 split
+        const treatmentGroup = Math.random() < 0.5 ? 'treatment' : 'control';
+        actions.push({ type: 'SET_TREATMENT_GROUP', group: treatmentGroup });
         } else {
           // Invalid NetID - show error and stay on welcome screen
           actions.push({ type: 'SET_ERROR', error: `NetID "${event.netId}" is not authorized. Please contact an administrator.` });
@@ -97,14 +103,32 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
 
     case 'DISH_TYPE':
       if (event.type === 'SELECT_DISH') {
-        newState = 'SCORE';
         actions.push({ type: 'SET_DISH_TYPE', dishType: event.dishType });
-        // Calculate score using the latest reading
-        if (context.readings.length > 0) {
-          const latestReading = context.readings[context.readings.length - 1];
-          const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
-          actions.push({ type: 'SET_SCORE', score });
-          // Don't save here - wait until user exits to save the actual score
+        
+        // Route based on treatment group assignment
+        if (context.treatmentGroup === 'control') {
+          // Control group: go to thank you screen (baseline data collection)
+          newState = 'THANK_YOU';
+          // Save baseline data (netid, dishType, weightGrams) with score=0
+          if (context.netId && context.readings.length > 0) {
+            const latestReading = context.readings[context.readings.length - 1];
+            actions.push({ 
+              type: 'SAVE_BASELINE_DATA', 
+              netId: context.netId, 
+              dishType: event.dishType, 
+              weightGrams: latestReading?.grams || 0 
+            });
+          }
+        } else {
+          // Treatment group: show score and leaderboard (default behavior)
+          newState = 'SCORE';
+          // Calculate score using the latest reading
+          if (context.readings.length > 0) {
+            const latestReading = context.readings[context.readings.length - 1];
+            const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
+            actions.push({ type: 'SET_SCORE', score });
+            // Don't save here - wait until user exits to save the actual score
+          }
         }
       } else if (event.type === 'BACK') {
         newState = 'WELCOME';
@@ -293,6 +317,7 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
         newContext.stableReadings = [];
         newContext.scoreSaved = false; // Reset score saved flag
         newContext.debugWeightOverride = undefined; // Reset debug weight
+        newContext.treatmentGroup = undefined; // Reset treatment group
         newContext.idleCountdown = 25; // Reset to 25 seconds
         console.log('New context after RESET_SESSION:', newContext);
         break;
@@ -325,6 +350,11 @@ export function applyActions(context: AppContext, actions: AppAction[]): AppCont
     case 'SET_DEBUG_WEIGHT':
       newContext.debugWeightOverride = action.weight || undefined;
       break;
+    case 'SET_TREATMENT_GROUP':
+      newContext.treatmentGroup = action.group;
+      console.log('=== SET_TREATMENT_GROUP ACTION ===');
+      console.log('Assigned to:', action.group);
+      break;
       case 'UPDATE_LEADERBOARD':
         const updatedLeaderboard = [...newContext.leaderboard, action.entry]
           .sort((a, b) => {
@@ -354,6 +384,7 @@ export function getInitialContext(): AppContext {
     previousScore: undefined, // Initialize previous score
     readings: [],
     stableReadings: [],
+    treatmentGroup: undefined, // Will be assigned when NetID is validated
     idleCountdown: 25,
     showIdleWarning: false,
     scoreSaved: false, // Initialize score saved flag

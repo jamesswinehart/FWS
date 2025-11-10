@@ -1,4 +1,4 @@
-import { fws, calculateDishScore, gateStable, parseLineToGrams } from '../lib/fws';
+import { fws, calculateDishScore, gateStable, parseLineToGrams, DISH_BASELINE_WEIGHTS, DISH_DECAY_CONSTANTS, DISH_TARE_WEIGHTS } from '../lib/fws';
 import { ScaleReading } from '../transport/transport';
 
 describe('FWS Scoring Functions', () => {
@@ -28,11 +28,15 @@ describe('FWS Scoring Functions', () => {
 
   describe('calculateDishScore', () => {
     it('should subtract plate tare weight when clearly gross (not net)', () => {
+      const tare = DISH_TARE_WEIGHTS.plate;
       // Ensure we are above the 0.6 * tare heuristic so subtraction path is used
-      const gross = 800; // > 0.6 * 711.6 ≈ 426.96
-      const adjusted = Math.max(0, gross - 711.6);
+      const gross = 800; // > 0.6 * tare
       const score = calculateDishScore(gross, 'plate');
-      expect(score).toBe(fws(adjusted, 0, 43.3));
+      // Verify that tare was subtracted by checking the score matches expected calculation
+      const adjusted = Math.max(0, gross - tare);
+      const expected = fws(adjusted, DISH_BASELINE_WEIGHTS.plate, DISH_DECAY_CONSTANTS.plate);
+      // The score should match the calculation with adjusted weight
+      expect(score).toBe(expected);
     });
 
     it('should subtract salad bowl tare weight when gross', () => {
@@ -40,7 +44,7 @@ describe('FWS Scoring Functions', () => {
       const gross = 250; // > 0.6 * tare ≈ 115.68
       const adjusted = Math.max(0, gross - tare);
       const score = calculateDishScore(gross, 'salad');
-      expect(score).toBe(fws(adjusted, 0, 28.9));
+      expect(score).toBe(fws(adjusted, DISH_BASELINE_WEIGHTS.salad, DISH_DECAY_CONSTANTS.salad));
     });
 
     it('should subtract cereal bowl tare weight when gross', () => {
@@ -48,7 +52,7 @@ describe('FWS Scoring Functions', () => {
       const gross = 200; // > 0.6 * tare ≈ 32.34
       const adjusted = Math.max(0, gross - tare);
       const score = calculateDishScore(gross, 'cereal');
-      expect(score).toBe(fws(adjusted, 0, 21.6));
+      expect(score).toBe(fws(adjusted, DISH_BASELINE_WEIGHTS.cereal, DISH_DECAY_CONSTANTS.cereal));
     });
 
     it('should handle zero/negative net weights as perfect score', () => {
