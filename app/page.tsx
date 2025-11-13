@@ -417,6 +417,32 @@ export default function FoodWasteScoreApp() {
         console.log('Successfully added to leaderboard:', updatedLeaderboard);
         console.log('Updated leaderboard length:', updatedLeaderboard.length);
         
+        // Save score to database immediately after leaderboard submission
+        if (context.dishType && context.readings.length > 0 && !context.scoreSaved) {
+          const latestReading = context.readings[context.readings.length - 1];
+          console.log('=== SAVING SCORE TO DATABASE AFTER LEADERBOARD SUBMISSION ===');
+          console.log('NetID:', context.netId);
+          console.log('Dish Type:', context.dishType);
+          console.log('Score:', context.currentScore);
+          console.log('Weight:', latestReading?.grams || 0, 'grams');
+          
+          try {
+            await saveScoreToAPI(
+              context.netId!,
+              mealPeriod,
+              context.currentScore!,
+              context.dishType,
+              latestReading?.grams || 0
+            );
+            console.log('Score saved to database successfully');
+            // Mark score as saved to prevent duplicate saves on exit
+            setContext(prev => ({ ...prev, scoreSaved: true }));
+          } catch (error) {
+            console.error('Failed to save score to database:', error);
+            // Don't throw - leaderboard submission succeeded even if score save failed
+          }
+        }
+        
         // Update context
         setContext(prev => ({ ...prev, leaderboard: updatedLeaderboard }));
         console.log('Context updated with new leaderboard');
