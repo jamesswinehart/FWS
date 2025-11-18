@@ -183,9 +183,9 @@ export default function DevModePanel({
             <h3 className="font-semibold text-white mb-2">Instructions:</h3>
             <ul className="list-disc list-inside space-y-1">
               <li>Adjust the weight slider or enter a value manually</li>
-              <li>Click "Send Reading Now" to send a reading to the system</li>
-              <li>Enable "Auto-send readings" to continuously send readings</li>
-              <li>Enable "Mark reading as stable" to bypass weight stability checks</li>
+              <li>Click &quot;Send Reading Now&quot; to send a reading to the system</li>
+              <li>Enable &quot;Auto-send readings&quot; to continuously send readings</li>
+              <li>Enable &quot;Mark reading as stable&quot; to bypass weight stability checks</li>
               <li>In dev mode, you can enter NetID without waiting for stable weight</li>
             </ul>
           </div>

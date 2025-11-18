@@ -304,7 +304,7 @@ export default function FoodWasteScoreApp() {
       }
     };
     loadLeaderboard();
-  }, []);
+  }, [dispatch]);
 
   // Event handlers
   const handleSubmitNetId = useCallback(async (netId: string) => {
@@ -481,7 +481,7 @@ export default function FoodWasteScoreApp() {
       console.log('Score is null?', context.currentScore === null);
       console.log('Score is falsy?', !context.currentScore);
     }
-  }, [context.currentScore, context.netId, mealPeriod]);
+  }, [context.currentScore, context.netId, context.dishType, context.readings, context.stableReadings, context.scoreSaved, context.leaderboard, mealPeriod]);
 
   const handleDebugWeightChange = useCallback((weight: number) => {
     dispatch({ type: 'SET_DEBUG_WEIGHT', weight });
