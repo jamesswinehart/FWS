@@ -37,6 +37,8 @@ import ScreenThankYou from '../components/ScreenThankYou';
 import ScreenIdle from '../components/ScreenIdle';
 import ScreenError from '../components/ScreenError';
 import StatusBar from '../components/StatusBar';
+import DevModePanel from '../components/DevModePanel';
+import { ScaleReading } from '../transport/transport';
 
 export default function FoodWasteScoreApp() {
   const [state, setState] = React.useState<AppState>('WELCOME');
@@ -47,6 +49,14 @@ export default function FoodWasteScoreApp() {
   const [debugWeightOverride, setDebugWeightOverride] = React.useState<number | null>(null);
   const [showConnectHelp, setShowConnectHelp] = React.useState(false);
   const [showReloadPrompt, setShowReloadPrompt] = React.useState(false);
+  // Check URL params for dev mode
+  const [devMode, setDevMode] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('dev') === 'true';
+    }
+    return false;
+  });
   
   // Use refs to avoid dependency issues
   const stateRef = React.useRef(state);
@@ -112,23 +122,6 @@ export default function FoodWasteScoreApp() {
         });
     }
     
-    // Handle baseline data save action (score = 0 for baseline data)
-    const saveBaselineAction = result.actions.find(a => a.type === 'SAVE_BASELINE_DATA');
-    if (saveBaselineAction && saveBaselineAction.type === 'SAVE_BASELINE_DATA') {
-      console.log('=== SAVING BASELINE DATA TO DATABASE ===');
-      console.log('NetID:', saveBaselineAction.netId);
-      console.log('Dish Type:', saveBaselineAction.dishType);
-      console.log('Weight:', saveBaselineAction.weightGrams, 'grams');
-      
-      // Save baseline data with score = 0
-      saveScoreToAPI(saveBaselineAction.netId, mealPeriod, 0, saveBaselineAction.dishType, saveBaselineAction.weightGrams)
-        .then(() => {
-          console.log('Baseline data saved to database successfully');
-        })
-        .catch((error) => {
-          console.error('Failed to save baseline data to database:', error);
-        });
-    }
   }, [mealPeriod]);
 
   // Handle scale readings
@@ -276,6 +269,34 @@ export default function FoodWasteScoreApp() {
       window.removeEventListener('click', handleUserActivity);
     };
   }, []);
+
+  // Dev mode keyboard shortcut (Ctrl+Shift+D)
+  useEffect(() => {
+    const handleDevModeKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setDevMode(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleDevModeKey);
+    return () => window.removeEventListener('keydown', handleDevModeKey);
+  }, []);
+
+  // Function to send manual readings in dev mode
+  const handleSendReading = useCallback((reading: ScaleReading) => {
+    dispatch({ type: 'READING_UPDATE', reading });
+  }, [dispatch]);
+
+  // Function to set weight directly (for dev mode)
+  const handleSetWeight = useCallback((weight: number) => {
+    const reading: ScaleReading = {
+      grams: weight,
+      stable: true,
+      ts: Date.now(),
+    };
+    dispatch({ type: 'READING_UPDATE', reading });
+  }, [dispatch]);
 
   // Load leaderboard on mount
   useEffect(() => {
@@ -479,10 +500,11 @@ export default function FoodWasteScoreApp() {
         // Use rolling stability gate and the latest reading's grams to avoid relying on device 'stable' flag
         const latestReading = context.readings?.[context.readings.length - 1];
         const hasStableNonzero = gateStable(context.readings) && (latestReading?.grams || 0) > 0;
+        // In dev mode, always allow NetID entry
         return (
           <ScreenWelcome 
             onSubmitNetId={handleSubmitNetId}
-            isWeightStable={hasStableNonzero}
+            isWeightStable={devMode || hasStableNonzero}
           />
         );
       
@@ -530,6 +552,13 @@ export default function FoodWasteScoreApp() {
 
   return (
     <div className="relative">
+      {/* Dev Mode Indicator */}
+      {devMode && (
+        <div className="fixed top-4 right-4 z-50 bg-yellow-600 text-black px-4 py-2 rounded-lg font-semibold shadow-lg">
+          DEV MODE ACTIVE (Ctrl+Shift+D to toggle)
+        </div>
+      )}
+      
       <StatusBar 
         transport={transport} 
         mealPeriod={getMealPeriodWithTime(mealPeriod)} 
@@ -618,6 +647,17 @@ export default function FoodWasteScoreApp() {
           <ScreenIdle countdown={context.idleCountdown} onCancel={handleCancelIdle} />
         </div>
       )}
+
+      {/* Developer Mode Panel */}
+      <DevModePanel
+        isOpen={devMode}
+        onClose={() => setDevMode(false)}
+        onSendReading={handleSendReading}
+        onSetWeight={handleSetWeight}
+        currentState={state}
+        currentWeight={context.readings?.[context.readings.length - 1]?.grams || 0}
+        isStable={gateStable(context.readings)}
+      />
     </div>
   );
 }

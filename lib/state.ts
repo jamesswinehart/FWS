@@ -2,6 +2,27 @@ import { ScaleReading } from '../transport/transport';
 import { calculateDishScore } from './fws';
 import { LeaderboardEntry } from './supabase';
 
+/**
+ * Deterministically assign a NetID to treatment or control group
+ * Uses a simple hash function to ensure consistent assignment (between-subjects design)
+ * This creates an approximately 50/50 split
+ * 
+ * NetID is normalized to lowercase to ensure case-insensitive consistency
+ */
+function assignTreatmentGroup(netId: string): 'treatment' | 'control' {
+  // Normalize to lowercase for consistency (matches database storage)
+  const normalized = netId.toLowerCase().trim();
+  
+  // Simple hash function: sum character codes
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i++) {
+    hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Use hash to determine group (50/50 split)
+  return Math.abs(hash) % 2 === 0 ? 'treatment' : 'control';
+}
+
 export type DishType = 'plate' | 'salad' | 'cereal';
 
 export type AppState = 
@@ -89,9 +110,9 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         if (event.isValid) {
         newState = 'DISH_TYPE';
         actions.push({ type: 'SET_NETID', netId: event.netId });
-        // Randomly assign to treatment (score/leaderboard) or control (thank you/exit) group
-        // 50/50 split
-        const treatmentGroup = Math.random() < 0.5 ? 'treatment' : 'control';
+        // Deterministically assign to treatment or control group based on NetID
+        // This ensures between-subjects design: same NetID always gets same group
+        const treatmentGroup = assignTreatmentGroup(event.netId);
         actions.push({ type: 'SET_TREATMENT_GROUP', group: treatmentGroup });
         } else {
           // Invalid NetID - show error and stay on welcome screen
@@ -107,17 +128,21 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         
         // Route based on treatment group assignment
         if (context.treatmentGroup === 'control') {
-          // Control group: go to thank you screen (baseline data collection)
+          // Control group: go to thank you screen (no score shown, but still collecting actual scores)
           newState = 'THANK_YOU';
-          // Save baseline data (netid, dishType, weightGrams) with score=0
+          // Calculate score but don't show it - save it silently for data collection
           if (context.netId && context.readings.length > 0) {
             const latestReading = context.readings[context.readings.length - 1];
+            const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
+            // Save the actual score (not baseline with score=0) for control group
             actions.push({ 
-              type: 'SAVE_BASELINE_DATA', 
+              type: 'SAVE_SCORE_TO_DB', 
               netId: context.netId, 
               dishType: event.dishType, 
+              score: score,
               weightGrams: latestReading?.grams || 0 
             });
+            actions.push({ type: 'SET_SCORE_SAVED', saved: true });
           }
         } else {
           // Treatment group: show score and leaderboard (default behavior)
