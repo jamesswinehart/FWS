@@ -91,9 +91,10 @@ export function addLeaderboardEntry(
   const leaderboard = loadLeaderboard();
   
   // Add new entry with timestamp if not present
+  // Generate numeric ID from timestamp if not provided
   const entryWithTimestamp: LeaderboardEntry = {
     ...entry,
-    id: entry.id || `local-${Date.now()}`,
+    id: entry.id || Math.floor(Date.now() / 1000), // Use timestamp in seconds as numeric ID
     created_at: entry.created_at || new Date().toISOString(),
   };
   
