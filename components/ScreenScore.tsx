@@ -41,7 +41,7 @@ export default function ScreenScore({
   return (
     <div className="min-h-screen bg-dark-slate flex items-center justify-center p-8">
       {/* Back button */}
-      <div className="absolute top-8 left-8 z-20">
+      <div className="absolute top-16 left-8 z-20">
         <button
           onClick={onBack}
           className="px-6 py-3 bg-gray-700 text-white rounded-lg text-lg font-semibold hover:bg-gray-600 transition-colors focus:outline-none focus:ring-4 focus:ring-blue-500"
