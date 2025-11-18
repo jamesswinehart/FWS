@@ -84,6 +84,40 @@ export async function addLeaderboardEntryToAPI(newEntry: Omit<LeaderboardEntry, 
   }
 }
 
+export function addLeaderboardEntry(
+  entry: LeaderboardEntry, 
+  maxEntries: number = 10
+): LeaderboardEntry[] {
+  const leaderboard = loadLeaderboard();
+  
+  // Add new entry with timestamp if not present
+  const entryWithTimestamp: LeaderboardEntry = {
+    ...entry,
+    id: entry.id || `local-${Date.now()}`,
+    created_at: entry.created_at || new Date().toISOString(),
+  };
+  
+  // Add new entry
+  leaderboard.push(entryWithTimestamp);
+  
+  // Sort by score (highest first), then by timestamp (most recent first for ties)
+  leaderboard.sort((a, b) => {
+    if (a.score !== b.score) {
+      return b.score - a.score; // Higher scores first
+    }
+    // For same scores, earlier submissions (lower timestamp) get higher rank
+    return a.created_at && b.created_at ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime() : 0;
+  });
+  
+  // Keep only top entries
+  const trimmedLeaderboard = leaderboard.slice(0, maxEntries);
+  
+  // Save updated leaderboard
+  saveLeaderboard(trimmedLeaderboard);
+  
+  return trimmedLeaderboard;
+}
+
 export function qualifiesForLeaderboard(score: number): boolean {
   // Allow all scores to be submitted
   return true;

@@ -48,7 +48,6 @@ export default function FoodWasteScoreApp() {
   }));
   const [debugWeightOverride, setDebugWeightOverride] = React.useState<number | null>(null);
   const [showConnectHelp, setShowConnectHelp] = React.useState(false);
-  const [showReloadPrompt, setShowReloadPrompt] = React.useState(false);
   // Check URL params for dev mode
   const [devMode, setDevMode] = React.useState(() => {
     if (typeof window !== 'undefined') {
@@ -164,14 +163,6 @@ export default function FoodWasteScoreApp() {
     }
   }, [state, context.treatmentGroup, dispatch]);
 
-  // Periodic reload prompt every 2 minutes 30 seconds
-  useEffect(() => {
-    // Start/restart the timer only when the prompt is hidden
-    if (!showReloadPrompt) {
-      const t = setTimeout(() => setShowReloadPrompt(true), 2.5 * 60 * 1000);
-      return () => clearTimeout(t);
-    }
-  }, [showReloadPrompt]);
 
   // Test idle timer functionality
   useEffect(() => {
@@ -334,11 +325,15 @@ export default function FoodWasteScoreApp() {
 
       const validateData = await validateResponse.json();
       const isValid = validateData.allowed;
+      // Use the normalized NetID from the API (lowercased and trimmed)
+      const normalizedNetId = validateData.netid || netId.toLowerCase().trim();
 
       console.log('NetID validation result:', isValid);
+      console.log('Original NetID:', netId);
+      console.log('Normalized NetID:', normalizedNetId);
 
-      // Dispatch validation result
-      dispatch({ type: 'NETID_VALIDATED', netId: netId.trim(), isValid });
+      // Dispatch validation result with normalized NetID
+      dispatch({ type: 'NETID_VALIDATED', netId: normalizedNetId, isValid });
     
       // Only proceed if NetID is valid
       if (isValid) {
@@ -362,10 +357,10 @@ export default function FoodWasteScoreApp() {
       }
     } catch (error) {
       console.error('Failed to validate NetID:', error);
-      // On error, show error message
+      // On error, show error message (normalize NetID for consistency)
       dispatch({ 
         type: 'NETID_VALIDATED', 
-        netId: netId.trim(), 
+        netId: netId.toLowerCase().trim(), 
         isValid: false 
       });
     }
@@ -622,25 +617,6 @@ export default function FoodWasteScoreApp() {
         </div>
       )}
 
-      {/* Reload reminder overlay (shows when connected) */}
-      {isConnected && showReloadPrompt && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black bg-opacity-60" />
-          <div className="relative z-50 text-center p-8 bg-gray-800 bg-opacity-90 rounded-xl shadow-2xl border border-gray-700 max-w-xl">
-            <h2 className="text-3xl font-bold text-white mb-4">Please reload the page</h2>
-            <p className="text-gray-300 mb-6">For best performance, reload this kiosk page periodically.</p>
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={() => window.location.reload()}
-                className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold transition-colors"
-              >
-                Reload Now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       {/* Idle warning modal overlay */}
       {context.showIdleWarning && (
         <div className="idle-modal-overlay fixed inset-0 z-50 bg-black bg-opacity-80 flex items-center justify-center">

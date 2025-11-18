@@ -13,14 +13,33 @@ function assignTreatmentGroup(netId: string): 'treatment' | 'control' {
   // Normalize to lowercase for consistency (matches database storage)
   const normalized = netId.toLowerCase().trim();
   
+  // Special case: test123 always gets treatment
+  if (normalized === 'test123') {
+    console.log('=== TREATMENT GROUP ASSIGNMENT ===');
+    console.log('NetID: test123 (special case - always treatment)');
+    return 'treatment';
+  }
+  
   // Simple hash function: sum character codes
   let hash = 0;
   for (let i = 0; i < normalized.length; i++) {
     hash = ((hash << 5) - hash) + normalized.charCodeAt(i);
     hash = hash & hash; // Convert to 32-bit integer
   }
-  // Use hash to determine group (50/50 split)
-  return Math.abs(hash) % 2 === 0 ? 'treatment' : 'control';
+  
+  const absHash = Math.abs(hash);
+  const group = absHash % 2 === 0 ? 'treatment' : 'control';
+  
+  // Log for debugging consistency
+  console.log('=== TREATMENT GROUP ASSIGNMENT ===');
+  console.log('Original NetID:', netId);
+  console.log('Normalized NetID:', normalized);
+  console.log('Hash:', hash);
+  console.log('Absolute Hash:', absHash);
+  console.log('Hash % 2:', absHash % 2);
+  console.log('Assigned Group:', group);
+  
+  return group;
 }
 
 export type DishType = 'plate' | 'salad' | 'cereal';
@@ -147,12 +166,16 @@ export function appReducer(state: AppState, context: AppContext, event: AppEvent
         } else {
           // Treatment group: show score and leaderboard (default behavior)
           newState = 'SCORE';
-          // Calculate score using the latest reading
+          // Calculate score using the latest reading (or 0g if no readings)
           if (context.readings.length > 0) {
             const latestReading = context.readings[context.readings.length - 1];
             const score = calculateDishScore(latestReading.grams, event.dishType, context.debugWeightOverride);
             actions.push({ type: 'SET_SCORE', score });
             // Don't save here - wait until user exits to save the actual score
+          } else {
+            // If no readings, use 0g (empty dish = perfect score)
+            const score = calculateDishScore(0, event.dishType, context.debugWeightOverride);
+            actions.push({ type: 'SET_SCORE', score });
           }
         }
       } else if (event.type === 'BACK') {
